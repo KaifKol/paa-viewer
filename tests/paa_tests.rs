@@ -337,3 +337,29 @@ fn test_lz77_empty_roundtrip() {
     assert!(res.is_ok());
     assert_eq!(res.unwrap(), 0);
 }
+
+#[test]
+fn test_clean_path_file_uri_decoding() {
+    let uri = std::path::PathBuf::from("file:///home/user/My%20Textures/arma%20texture.paa");
+    let clean = paa_viewer::gui::app::clean_path(uri);
+    assert_eq!(clean, std::path::PathBuf::from("/home/user/My Textures/arma texture.paa"));
+}
+
+#[test]
+fn test_appimage_executable_resolution() {
+    // If APPIMAGE environment variable is set to a real path, resolve_executable_path should use it
+    let temp_appimage = std::env::temp_dir().join("test_fake_appimage.AppImage");
+    let _ = std::fs::write(&temp_appimage, b"fake");
+
+    unsafe {
+        std::env::set_var("APPIMAGE", &temp_appimage);
+    }
+
+    let resolved = paa_viewer::context_menu::ContextMenuManager::resolve_executable_path().unwrap();
+    assert_eq!(resolved, temp_appimage);
+
+    unsafe {
+        std::env::remove_var("APPIMAGE");
+    }
+    let _ = std::fs::remove_file(&temp_appimage);
+}

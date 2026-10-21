@@ -31,10 +31,60 @@ impl ContextMenuManager {
         Self::config_dir().join("disabled-auto-register")
     }
 
+    pub fn resolve_executable_path() -> Result<PathBuf, String> {
+        // 1. If running inside an AppImage, the real permanent executable is the .AppImage file itself
+        if let Ok(appimage) = std::env::var("APPIMAGE") {
+            if !appimage.is_empty() {
+                let p = PathBuf::from(appimage);
+                if p.exists() {
+                    return Ok(p);
+                }
+            }
+        }
+
+        if let Ok(argv0) = std::env::var("ARGV0") {
+            if !argv0.is_empty() {
+                let p = PathBuf::from(argv0);
+                if p.exists() && !p.to_string_lossy().contains("/tmp/.mount_") {
+                    return Ok(p);
+                }
+            }
+        }
+
+        let exe = std::env::current_exe()
+            .map_err(|e| format!("Failed to get current executable path: {e}"))?;
+
+        // 2. If current_exe points into a temporary AppImage mount (/tmp/.mount_*), find the real AppImage
+        let exe_str = exe.to_string_lossy();
+        if exe_str.contains("/tmp/.mount_") {
+            if let Ok(owd) = std::env::var("OWD") {
+                let owd_path = PathBuf::from(owd);
+                if let Ok(entries) = std::fs::read_dir(&owd_path) {
+                    for entry in entries.flatten() {
+                        let path = entry.path();
+                        if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                            if name.to_lowercase().contains("paa") && name.ends_with(".AppImage") {
+                                return Ok(path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(exe)
+    }
+
     pub fn auto_register_if_needed() {
         if Self::disabled_marker_path().exists() {
             return;
         }
+
+        let target_exe = match Self::resolve_executable_path() {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        let target_exe_str = target_exe.to_string_lossy();
 
         let needs_install = if !Self::is_installed() {
             true
@@ -43,12 +93,8 @@ impl ContextMenuManager {
             {
                 let desktop_file = Self::linux_user_data_dir().join("applications").join("paa-viewer.desktop");
                 if let Ok(content) = std::fs::read_to_string(&desktop_file) {
-                    if let Ok(current_exe) = std::env::current_exe() {
-                        let current_exe_str = current_exe.to_string_lossy();
-                        !content.contains(&*current_exe_str)
-                    } else {
-                        false
-                    }
+                    // Re-register if desktop file has stale /tmp/.mount_ or points to different exe
+                    content.contains("/tmp/.mount_") || !content.contains(&*target_exe_str)
                 } else {
                     true
                 }
@@ -65,8 +111,7 @@ impl ContextMenuManager {
     }
 
     pub fn install() -> Result<String, String> {
-        let exe = std::env::current_exe()
-            .map_err(|e| format!("Failed to get current executable path: {e}"))?;
+        let exe = Self::resolve_executable_path()?;
 
         let _ = std::fs::remove_file(Self::disabled_marker_path());
 

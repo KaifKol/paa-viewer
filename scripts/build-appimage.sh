@@ -55,6 +55,7 @@ fi
 
 mkdir -p "${ROOT_DIR}/dist"
 OUTPUT_APPIMAGE="${ROOT_DIR}/dist/PAA_Viewer-x86_64.AppImage"
+rm -f "${OUTPUT_APPIMAGE}"
 
 # Check if appimagetool is available or download it
 APPIMAGETOOL=""

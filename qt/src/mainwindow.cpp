@@ -224,7 +224,6 @@ void MainWindow::setupMenus() {
     QMenu* toolsMenu = mb->addMenu(tr("&Tools"));
     toolsMenu->addAction(tr("Halve Resolution (÷2)"), this, &MainWindow::onQuickScaleHalf);
     toolsMenu->addAction(tr("Double Resolution (x2)"), this, &MainWindow::onQuickScaleDouble);
-    toolsMenu->addAction(tr("Align to Nearest POT"), this, &MainWindow::onQuickPotNearest);
     toolsMenu->addAction(tr("Align to Next POT"), this, &MainWindow::onQuickPotNext);
     toolsMenu->addSeparator();
     toolsMenu->addAction(tr("Export Windows .reg File"), this, &MainWindow::onExportWindowsReg);
@@ -516,24 +515,6 @@ void MainWindow::onQuickScaleDouble() {
     );
     if (err) {
         QMessageBox::critical(this, tr("Scale Error"), QString::fromUtf8(err));
-        paa_ffi_free_string(err);
-    } else {
-        loadFile(outPath);
-    }
-}
-
-void MainWindow::onQuickPotNearest() {
-    if (m_currentFilePath.isEmpty()) return;
-    QString outPath = m_currentFilePath + ".pot.paa";
-    char* err = paa_ffi_convert(
-        m_currentFilePath.toUtf8().constData(),
-        outPath.toUtf8().constData(),
-        nullptr,
-        "pot-nearest",
-        true
-    );
-    if (err) {
-        QMessageBox::critical(this, tr("POT Error"), QString::fromUtf8(err));
         paa_ffi_free_string(err);
     } else {
         loadFile(outPath);

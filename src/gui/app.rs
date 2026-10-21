@@ -3,7 +3,7 @@ use eframe::egui::{self, Color32, CornerRadius, Pos2, Rect, Sense, Stroke, Strok
 use image::{DynamicImage, GenericImageView};
 
 use crate::paa::{PaaImage, PaaMetadata, PaXType};
-use crate::resize::{is_power_of_two, nearest_power_of_two, next_power_of_two, resize_pot, scale_by_factor, scale_step, PotMode, ResizeFilter};
+use crate::resize::{is_power_of_two, next_power_of_two, resize_pot, scale_by_factor, scale_step, PotMode, ResizeFilter};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ChannelMode {
@@ -509,15 +509,8 @@ impl eframe::App for PaaViewerApp {
 
                     if let Some(img) = self.current_image.clone() {
                         let (w, h) = img.dimensions();
-                        let near_w = nearest_power_of_two(w);
-                        let near_h = nearest_power_of_two(h);
                         let next_w = next_power_of_two(w);
                         let next_h = next_power_of_two(h);
-
-                        if ui.button(format!("Nearest POT ({}x{})", near_w, near_h)).clicked() {
-                            let resized = resize_pot(&img, PotMode::Nearest, self.resize_filter);
-                            self.apply_resize(resized, ctx);
-                        }
 
                         if ui.button(format!("Next POT ({}x{})", next_w, next_h)).clicked() {
                             let resized = resize_pot(&img, PotMode::Next, self.resize_filter);

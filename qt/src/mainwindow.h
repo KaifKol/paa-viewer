@@ -68,7 +68,6 @@ private slots:
     void onChannelChanged(int index);
     void onQuickScaleHalf();
     void onQuickScaleDouble();
-    void onQuickPotNearest();
     void onQuickPotNext();
     void onToggleContextMenu();
     void onExportWindowsReg();

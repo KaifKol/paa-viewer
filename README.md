@@ -6,7 +6,7 @@ Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Boh
 
 - **Dual Graphical Interfaces**:
   - **Standalone egui / eframe GUI**: Ultra-fast GPU-accelerated viewer with zero external desktop dependencies. Perfect for portable standalone use on Linux and Windows.
-  - **Native Qt 6 GUI (`paa-viewer-qt`)**: Polished Qt 6 desktop application using Fusion dark styling, dockable inspector panels, smooth graphics view, and deep KDE/GNOME integration.
+  - **Native Qt 6 GUI (`paa-viewer-qt`)**: Polished Qt 6 desktop application seamlessly adapting to native Linux system colors and theme (KDE Breeze, GNOME/GTK, dark/light mode), dockable inspector panels, smooth graphics view, and deep desktop integration.
   - Interactive Mipmap Navigator: inspect all mip levels with dimensions, compressed vs uncompressed sizes, compression ratio, and switch view to any level instantly.
   - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale.
   - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch.

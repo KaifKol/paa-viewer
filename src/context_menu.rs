@@ -237,7 +237,7 @@ Type=Application
 Name=PAA Viewer & Converter
 GenericName=Texture Viewer
 Comment=Bohemia Interactive PAA texture viewer, converter, and POT resizer
-Exec="{exe_str}" %F
+Exec="{exe_str}" %f
 Icon=paa-viewer
 Terminal=false
 Categories=Graphics;2DGraphics;RasterGraphics;Viewer;
@@ -248,17 +248,17 @@ Actions=ConvertToPng;ConvertToPaaDxt5;ConvertToPaaDxt1;
 [Desktop Action ConvertToPng]
 Name=Convert to PNG
 Icon=image-png
-Exec="{exe_str}" convert "%f" --notify
+Exec="{exe_str}" convert %f --notify
 
 [Desktop Action ConvertToPaaDxt5]
 Name=Convert to PAA (DXT5 POT)
 Icon=image-x-generic
-Exec="{exe_str}" convert "%f" --format dxt5 --resize pot-nearest --notify
+Exec="{exe_str}" convert %f --format dxt5 --resize pot-nearest --notify
 
 [Desktop Action ConvertToPaaDxt1]
 Name=Convert to PAA (DXT1 POT)
 Icon=image-x-generic
-Exec="{exe_str}" convert "%f" --format dxt1 --resize pot-nearest --notify
+Exec="{exe_str}" convert %f --format dxt1 --resize pot-nearest --notify
 "#
         );
         std::fs::write(app_dir.join("paa-viewer.desktop"), desktop_content)
@@ -276,7 +276,7 @@ X-KDE-Priority=TopLevel
 [Desktop Action ConvertPng]
 Name=Convert to PNG (via PAA Viewer)
 Icon=image-png
-Exec="{exe_str}" convert "%f" --notify
+Exec="{exe_str}" convert %f --notify
 "#
         );
         let _ = std::fs::write(kio_dir.join("paa-convert-png.desktop"), &kio_paa_content);
@@ -293,12 +293,12 @@ X-KDE-Priority=TopLevel
 [Desktop Action ConvertPaaDxt5]
 Name=Convert to PAA (DXT5 POT)
 Icon=image-x-generic
-Exec="{exe_str}" convert "%f" --format dxt5 --resize pot-nearest --notify
+Exec="{exe_str}" convert %f --format dxt5 --resize pot-nearest --notify
 
-[Desktop Action ConvertPaaDxt1]
+[Desktop Action ConvertToPaaDxt1]
 Name=Convert to PAA (DXT1 POT)
 Icon=image-x-generic
-Exec="{exe_str}" convert "%f" --format dxt1 --resize pot-nearest --notify
+Exec="{exe_str}" convert %f --format dxt1 --resize pot-nearest --notify
 "#
         );
         let _ = std::fs::write(kio_dir.join("paa-convert-paa.desktop"), &kio_img_content);

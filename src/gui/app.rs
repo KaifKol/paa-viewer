@@ -827,13 +827,31 @@ fn draw_checkerboard(painter: &egui::Painter, rect: Rect, viewport: Rect) {
 }
 
 pub fn clean_path(path: PathBuf) -> PathBuf {
-    let s = path.to_string_lossy();
+    let raw = path.to_string_lossy();
+    let mut s = raw.trim();
+
+    if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
+        s = &s[1..s.len() - 1];
+    }
+    s = s.trim();
+
     let unescaped = if let Some(stripped) = s.strip_prefix("file://") {
-        percent_decode(stripped)
+        let path_part = if let Some(after_host) = stripped.strip_prefix("localhost") {
+            after_host
+        } else {
+            stripped
+        };
+        percent_decode(path_part)
     } else {
         s.to_string()
     };
-    PathBuf::from(unescaped)
+
+    let p = PathBuf::from(unescaped);
+    if let Ok(canon) = p.canonicalize() {
+        canon
+    } else {
+        p
+    }
 }
 
 fn percent_decode(s: &str) -> String {

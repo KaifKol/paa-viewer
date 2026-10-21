@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+if which update-mime-database >/dev/null 2>&1; then
+    update-mime-database /usr/share/mime || true
+fi
+if which update-desktop-database >/dev/null 2>&1; then
+    update-desktop-database /usr/share/applications || true
+fi
+if which ldconfig >/dev/null 2>&1; then
+    ldconfig || true
+fi
+
+exit 0

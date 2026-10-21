@@ -1,0 +1,104 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    name: Build Linux Packages (deb & AppImage)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install System Dependencies (Qt6, CMake)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev cmake ninja-build libgl1-mesa-dev libx11-dev libxcursor-dev libxrandr-dev libxi-dev libxinerama-dev
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Tests
+        run: cargo test --verbose
+
+      - name: Build Debian Package (.deb)
+        run: ./scripts/build-deb.sh
+
+      - name: Build AppImage (.AppImage)
+        run: ./scripts/build-appimage.sh
+
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paa-viewer-linux-packages
+          path: |
+            dist/*.deb
+            dist/*.AppImage
+            dist/*.tar.gz
+
+  build-windows:
+    name: Build Windows Binary (.exe & zip)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build Windows Binary
+        run: cargo build --release
+
+      - name: Assemble Windows Distribution Bundle
+        shell: bash
+        run: |
+          mkdir -p dist/paa-viewer
+          cp target/release/paa-viewer.exe dist/paa-viewer/
+          cp packaging/windows/paa-viewer-context-menu.reg dist/paa-viewer/
+          cp packaging/paa-viewer.ico dist/paa-viewer/
+          cp README.md dist/paa-viewer/
+          cat << 'EOF' > dist/paa-viewer/install-context-menu.bat
+          @echo off
+          echo Registering PAA Viewer context menu and file associations...
+          reg import paa-viewer-context-menu.reg
+          if %ERRORLEVEL% EQU 0 (
+              echo Successfully registered PAA Viewer in Windows context menu!
+          ) else (
+              echo Failed to import registry keys. Please right-click install-context-menu.bat and select 'Run as Administrator'.
+          )
+          pause
+          EOF
+          cd dist
+          7z a paa-viewer-windows-x64.zip paa-viewer
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: paa-viewer-windows-x64
+          path: dist/*.zip
+
+  create-release:
+    name: Publish Release Artifacts
+    needs: [build-linux, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all built artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            paa-viewer-linux-packages/*
+            paa-viewer-windows-x64/*
+          generate_release_notes: true

@@ -1,0 +1,18 @@
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "${0}")")"
+
+export PATH="${HERE}/usr/bin:${PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+export XDG_DATA_DIRS="${HERE}/usr/share:${XDG_DATA_DIRS}"
+
+# If --qt is specified or PAAVIEWER_BACKEND=qt, launch Qt6 GUI
+if [ "${1:-}" = "--qt" ] || [ "${PAAVIEWER_BACKEND:-}" = "qt" ]; then
+    if [ "${1:-}" = "--qt" ]; then
+        shift
+    fi
+    if [ -x "${HERE}/usr/bin/paa-viewer-qt" ]; then
+        exec "${HERE}/usr/bin/paa-viewer-qt" "$@"
+    fi
+fi
+
+exec "${HERE}/usr/bin/paa-viewer" "$@"

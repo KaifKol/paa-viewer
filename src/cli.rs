@@ -43,8 +43,8 @@ pub enum Commands {
         #[arg(help = "Source image path")]
         input: PathBuf,
 
-        #[arg(help = "Target image destination path")]
-        output: PathBuf,
+        #[arg(help = "Optional destination path (defaults to switching between .paa and .png)")]
+        output: Option<PathBuf>,
 
         #[arg(long, help = "Target PAA format: dxt1, dxt3, dxt5, argb8888, argb1555, argb4444, graya")]
         format: Option<PaaFormatArg>,
@@ -87,6 +87,28 @@ pub enum Commands {
 
         #[arg(long, help = "Process subdirectories recursively")]
         recursive: bool,
+    },
+    #[command(about = "Manage system context menu and file association integration")]
+    ContextMenu {
+        #[command(subcommand)]
+        action: ContextMenuAction,
+    },
+}
+#[derive(Debug, Subcommand)]
+pub enum ContextMenuAction {
+    #[command(about = "Register PAA Viewer in system context menus and file associations")]
+    Install,
+
+    #[command(about = "Unregister PAA Viewer from system context menus")]
+    Uninstall,
+
+    #[command(about = "Check if PAA Viewer is registered in system context menus")]
+    Status,
+
+    #[command(about = "Export Windows registry file (.reg) for manual import")]
+    ExportReg {
+        #[arg(help = "Output path for .reg file", default_value = "paa-viewer-context-menu.reg")]
+        output: PathBuf,
     },
 }
 

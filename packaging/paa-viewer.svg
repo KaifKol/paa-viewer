@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#11111b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#89b4fa"/>
+      <stop offset="100%" stop-color="#cba6f7"/>
+    </linearGradient>
+    <linearGradient id="badge" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f38ba8"/>
+      <stop offset="100%" stop-color="#fab387"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect x="16" y="16" width="224" height="224" rx="48" fill="url(#bg)" stroke="#313244" stroke-width="4"/>
+
+  <!-- Checkerboard grid preview in center -->
+  <g opacity="0.25">
+    <rect x="56" y="56" width="36" height="36" fill="#cdd6f4"/>
+    <rect x="128" y="56" width="36" height="36" fill="#cdd6f4"/>
+    <rect x="92" y="92" width="36" height="36" fill="#cdd6f4"/>
+    <rect x="164" y="92" width="36" height="36" fill="#cdd6f4"/>
+    <rect x="56" y="128" width="36" height="36" fill="#cdd6f4"/>
+    <rect x="128" y="128" width="36" height="36" fill="#cdd6f4"/>
+  </g>
+
+  <!-- Mipmap levels nested frames -->
+  <rect x="48" y="48" width="160" height="120" rx="12" fill="none" stroke="url(#accent)" stroke-width="4"/>
+  <rect x="48" y="48" width="80" height="60" rx="8" fill="none" stroke="url(#accent)" stroke-dasharray="4,4" stroke-width="2" opacity="0.6"/>
+  <rect x="48" y="48" width="40" height="30" rx="4" fill="none" stroke="url(#accent)" stroke-dasharray="2,2" stroke-width="1.5" opacity="0.4"/>
+
+  <!-- Mountain / Image glyph -->
+  <path d="M 68 148 L 108 92 L 144 136 L 168 108 L 192 148 Z" fill="url(#accent)" opacity="0.85"/>
+  <circle cx="178" cy="80" r="12" fill="#f9e2af"/>
+
+  <!-- PAA Badge at bottom -->
+  <rect x="48" y="184" width="160" height="38" rx="10" fill="url(#badge)"/>
+  <text x="128" y="210" font-family="monospace, sans-serif" font-weight="900" font-size="22" fill="#11111b" text-anchor="middle" letter-spacing="3">PAA VIEW</text>
+</svg>

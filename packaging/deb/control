@@ -1,0 +1,10 @@
+Package: paa-viewer
+Version: 0.1.0
+Section: graphics
+Priority: optional
+Architecture: amd64
+Maintainer: omp <omp@localhost>
+Description: Bohemia Interactive PAA texture viewer, converter, and POT resizer
+ High performance texture viewer and converter for Bohemia Interactive PAA
+ textures (Arma 3, DayZ). Features cross-platform GPU-accelerated viewer,
+ native Qt6 GUI interface, Power of Two resizing, and file manager context menu.

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="image/x-paa">
+    <comment>Bohemia Interactive PAA Texture</comment>
+    <glob pattern="*.paa"/>
+    <glob pattern="*.pac"/>
+    <icon name="paa-viewer"/>
+  </mime-type>
+</mime-info>

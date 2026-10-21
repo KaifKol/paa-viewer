@@ -1,17 +1,28 @@
 # PAA Viewer & Converter
 
-Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Bohemia Interactive PAA files (Arma 3, DayZ, Real Virtuality engine), written in Rust.
+Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Bohemia Interactive PAA files (Arma 3, DayZ, Real Virtuality engine), written in Rust with optional native Qt 6 interface for Linux desktop environments.
 
 ## Features
 
-- **Desktop GUI Viewer (egui / eframe)**:
-  - High-performance GPU-accelerated rendering with smooth zoom and pan
-  - Checkerboard background for transparent alpha textures
-  - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale
-  - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch
-  - Interactive Mipmap Navigator: inspect all mip levels with dimensions, compressed vs uncompressed size, compression ratio, and switch view to any level instantly
-  - Drag & Drop: drag any `.paa`, `.png`, `.jpg`, `.tga`, `.bmp`, or `.webp` into the window to load immediately
-  - Native file open and export dialogs (`rfd`)
+- **Dual Graphical Interfaces**:
+  - **Standalone egui / eframe GUI**: Ultra-fast GPU-accelerated viewer with zero external desktop dependencies. Perfect for portable standalone use on Linux and Windows.
+  - **Native Qt 6 GUI (`paa-viewer-qt`)**: Polished Qt 6 desktop application using Fusion dark styling, dockable inspector panels, smooth graphics view, and deep KDE/GNOME integration.
+  - Interactive Mipmap Navigator: inspect all mip levels with dimensions, compressed vs uncompressed sizes, compression ratio, and switch view to any level instantly.
+  - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale.
+  - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch.
+  - Drag & Drop: drag any `.paa`, `.png`, `.jpg`, `.tga`, `.bmp`, or `.webp` into the window to load immediately.
+
+- **System Context Menu & File Association Integration**:
+  - **Linux Integration**:
+    - FreeDesktop `.desktop` file registration
+    - MIME type definition for `image/x-paa` (`*.paa`, `*.pac`)
+    - Dolphin / KDE service menu actions (`~/.local/share/kio/servicemenus/paa-actions.desktop`)
+    - Context menu actions: "Open with PAA Viewer", "Convert to PNG", "Convert to PAA (DXT5 POT)"
+    - In-GUI toggle button or CLI: `paa-viewer context-menu install` / `uninstall`
+  - **Windows Explorer Integration**:
+    - Right-click context menu options for `.paa` files ("Open with PAA Viewer", "Convert to PNG")
+    - Right-click context menu options for `.png`, `.jpg`, `.tga` files ("Convert to PAA (DXT5 POT)")
+    - Instant registration via CLI, GUI button, or pre-generated `paa-viewer-context-menu.reg`
 
 - **Full PAA Format Codec**:
   - Formats supported: DXT1, DXT2, DXT3, DXT4, DXT5, ARGB8888, ARGB1555, ARGB4444, GRAYA
@@ -41,103 +52,161 @@ Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Boh
 
 ---
 
-## Installation & Build
+## Build & Installation
 
 Requires Rust 1.85+ (Edition 2024):
 
 ```bash
+# Build Rust core binary and libraries
 cargo build --release
+
+# Build native Qt6 interface (optional, for Linux)
+cmake -B qt/build -S qt
+cmake --build qt/build
 ```
 
-The compiled binary will be located at `target/release/paa-viewer`.
+---
+
+## Packaging
+
+The project includes production-ready automated packaging scripts:
+
+### 1. Debian Package (`.deb`)
+Creates a complete `.deb` package containing both binaries, icons, desktop file, MIME database entry, and post-installation hooks:
+
+```bash
+./scripts/build-deb.sh
+```
+Output: `dist/paa-viewer_0.1.0_amd64.deb`
+
+Install on Debian/Ubuntu/Mint:
+```bash
+sudo dpkg -i dist/paa-viewer_0.1.0_amd64.deb
+```
+
+### 2. Linux AppImage (`.AppImage`)
+Creates a standalone, portable AppImage bundle that runs on any modern Linux distribution without installing dependencies:
+
+```bash
+./scripts/build-appimage.sh
+```
+Output: `dist/PAA_Viewer-x86_64.AppImage`
+
+Run directly:
+```bash
+./dist/PAA_Viewer-x86_64.AppImage
+```
+
+### 3. Windows Executable & Bundle (`.exe` & `.zip`)
+Cross-compiles for Windows x86_64 and packages the executable, icon, and context menu registry installer:
+
+```bash
+./scripts/build-windows.sh
+```
+Output: `dist/paa-viewer-windows-x64.zip`
 
 ---
 
 ## CLI Usage
 
-### 1. Launch GUI
+### Launch Graphical Interface
 
 ```bash
-# Launch GUI directly
+# Launch default GUI (egui)
 paa-viewer
 
-# Launch GUI and immediately open a texture
-paa-viewer path/to/texture.paa
+# Launch GUI and open texture
+paa-viewer texture.paa
+
+# Launch native Qt 6 GUI (Linux)
+./qt/build/paa-viewer-qt texture.paa
 ```
 
-### 2. Inspect PAA Metadata (`info`)
-
-Print complete technical details, mipmap hierarchy, and tagged sections:
+### System Context Menu Management
 
 ```bash
+# Register in system context menu and file associations (Linux or Windows)
+paa-viewer context-menu install
+
+# Check registration status
+paa-viewer context-menu status
+
+# Unregister from context menu
+paa-viewer context-menu uninstall
+
+# Export Windows .reg file for manual installation
+paa-viewer context-menu export-reg paa-context-menu.reg
+```
+
+### Inspect PAA Metadata (`info`)
+
+```bash
+# Human-readable table in terminal
 paa-viewer info texture.paa
-```
 
-Output formatted as JSON (useful for modding tools and scripting):
-
-```bash
+# JSON output for modding tools and automation
 paa-viewer info texture.paa --json
 ```
 
-### 3. Convert Single Image (`convert`)
-
-Convert PNG to PAA with DXT5 compression, power-of-two alignment, and mipmap generation:
+### Convert Images (`convert`)
 
 ```bash
+# Convert PNG to PAA (DXT5) with power-of-two alignment
 paa-viewer convert input.png output.paa --format dxt5 --resize pot-nearest
+
+# Convert PAA to PNG (output path auto-derived if omitted)
+paa-viewer convert texture.paa
+
+# Scale texture by 50% (half resolution)
+paa-viewer convert texture.paa scaled.paa --resize 0.5
 ```
 
-Convert PAA to PNG:
+### Batch Conversion (`batch`)
 
 ```bash
-paa-viewer convert input.paa output.png
-```
+# Batch convert directory of PNGs to PAA
+paa-viewer batch ./input_png --out-dir ./output_paa --to paa --format dxt5 --resize pot-nearest
 
-Scale texture by 50% (half resolution):
-
-```bash
-paa-viewer convert input.paa output.paa --resize 0.5
-```
-
-Resize to exact 1024x1024 with Lanczos3 filter:
-
-```bash
-paa-viewer convert input.png output.paa --format dxt1 --resize 1024x1024 --filter lanczos
-```
-
-Available format options: `dxt1`, `dxt3`, `dxt5`, `argb8888`, `argb1555`, `argb4444`, `graya`.
-
-### 4. Batch Conversion (`batch`)
-
-Batch convert an entire directory of PNGs to PAA:
-
-```bash
-paa-viewer batch ./textures_png --out-dir ./textures_paa --to paa --format dxt5 --resize pot-nearest
-```
-
-Batch convert PAAs to PNGs:
-
-```bash
-paa-viewer batch ./textures_paa --out-dir ./textures_png --to png
+# Batch convert PAAs to PNG
+paa-viewer batch ./input_paa --out-dir ./output_png --to png
 ```
 
 ---
 
-## Architecture & Codebase Design
+## Project Structure
 
-- `src/paa/`: Core PAA codec module
-  - `pax.rs`: `PaXType` definitions, pixel converters, `texpresso` bridge
-  - `lzo.rs`: LZO1X-1 / LZSS compression and decompressor
-  - `lz77.rs`: Bohemia LZ77 compression and decompressor
-  - `mipmap.rs`: `Mipmap` level parsing, encoding, and RGBA decoding
-  - `taggs.rs`: `GGAT` tagged metadata sections parser and writer
-  - `image.rs`: `PaaImage` top-level container, reader, writer, and metadata extractor
-- `src/resize.rs`: Power-of-two mathematical routines, factor scaling, stretch, and fit-pad logic
-- `src/convert.rs`: File format conversion pipeline and batch processing engine
-- `src/cli.rs`: Command line arguments definition and parsing
-- `src/gui/`: Graphical interface implementation
-  - `app.rs`: Main egui viewport, canvas drawing, channel modes, inspector, and sidebar controls
-  - `mod.rs`: Native desktop window initialization via `eframe`
+```
+paa-viewer/
+├── Cargo.toml            # Rust manifest (binary + rlib/cdylib/staticlib)
+├── src/
+│   ├── main.rs           # CLI entry point and dispatch
+│   ├── lib.rs            # Public Rust library API
+│   ├── ffi.rs            # C-FFI exports for Qt and external bindings
+│   ├── context_menu.rs   # Linux & Windows context menu registration
+│   ├── convert.rs        # Format conversion and batch processing
+│   ├── resize.rs         # Power-of-two math and resampling
+│   ├── gui/              # egui cross-platform desktop interface
+│   └── paa/              # Core PAA codec (LZO, LZ77, Mipmaps, Tags, Pax)
+├── qt/                   # Native Linux Qt 6 GUI interface (C++ & CMake)
+│   ├── CMakeLists.txt
+│   └── src/              # MainWindow, TextureCanvas, FFI bridge
+├── packaging/
+│   ├── paa-viewer.desktop
+│   ├── paa-viewer.xml    # FreeDesktop MIME type image/x-paa
+│   ├── paa-viewer.svg    # Vector application icon
+│   ├── paa-viewer.png    # 256x256 raster icon
+│   ├── deb/              # Debian package control files
+│   ├── appimage/         # AppRun launcher script
+│   └── windows/          # Registry script & .ico icon
+├── scripts/
+│   ├── build-deb.sh      # Debian packaging script
+│   ├── build-appimage.sh # AppImage packaging script
+│   └── build-windows.sh  # Windows cross-compilation & packaging script
+├── tests/
+│   └── paa_tests.rs      # Comprehensive codec and pipeline tests
+└── .github/workflows/
+    └── release.yml       # Automated GitHub Actions release pipeline
+```
 
 ---
 

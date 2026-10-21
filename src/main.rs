@@ -3,7 +3,8 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use clap::Parser;
 
-use paa_viewer::cli::{build_convert_options, Cli, Commands};
+use paa_viewer::cli::{build_convert_options, Cli, Commands, ContextMenuAction};
+use paa_viewer::context_menu::ContextMenuManager;
 use paa_viewer::convert::{batch_convert, convert_image};
 use paa_viewer::gui::run_gui;
 use paa_viewer::paa::PaaImage;
@@ -49,8 +50,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 no_mipmaps,
             )?;
 
-            println!("Converting '{}' -> '{}'...", input.display(), output.display());
-            let report = convert_image(&input, &output, &options)?;
+            let out_path = output.unwrap_or_else(|| {
+                let stem = input.file_stem().and_then(|s| s.to_str()).unwrap_or("image");
+                let ext = input.extension().and_then(|s| s.to_str()).map(|s| s.to_ascii_lowercase()).unwrap_or_default();
+                let target_ext = if ext == "paa" || ext == "pac" { "png" } else { "paa" };
+                input.with_file_name(format!("{stem}.{target_ext}"))
+            });
+
+            println!("Converting '{}' -> '{}'...", input.display(), out_path.display());
+            let report = convert_image(&input, &out_path, &options)?;
 
             println!("Conversion completed successfully!");
             println!("  Format:     {}", report.target_format_name);
@@ -100,6 +108,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
+        Some(Commands::ContextMenu { action }) => match action {
+            ContextMenuAction::Install => {
+                let msg = ContextMenuManager::install()?;
+                println!("{msg}");
+            }
+            ContextMenuAction::Uninstall => {
+                let msg = ContextMenuManager::uninstall()?;
+                println!("{msg}");
+            }
+            ContextMenuAction::Status => {
+                let installed = ContextMenuManager::is_installed();
+                if installed {
+                    println!("PAA Viewer is currently registered in system context menus.");
+                } else {
+                    println!("PAA Viewer is NOT registered in system context menus.");
+                }
+            }
+            ContextMenuAction::ExportReg { output } => {
+                let exe = std::env::current_exe()?;
+                let reg = ContextMenuManager::generate_windows_reg(&exe);
+                std::fs::write(&output, reg)?;
+                println!("Exported Windows registry file to: {}", output.display());
+            }
+        },
     }
 
     Ok(())

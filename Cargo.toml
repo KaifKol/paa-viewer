@@ -2,6 +2,10 @@
 name = "paa-viewer"
 version = "0.1.0"
 edition = "2024"
+[lib]
+name = "paa_viewer"
+crate-type = ["rlib", "cdylib", "staticlib"]
+
 
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tga", "bmp", "webp"] }

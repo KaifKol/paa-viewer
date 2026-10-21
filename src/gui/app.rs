@@ -558,6 +558,47 @@ impl eframe::App for PaaViewerApp {
 
                         ui.checkbox(&mut self.export_generate_mipmaps, "Generate Mipmaps");
                     });
+
+                    // System Integration & Context Menu
+                    ui.add_space(12.0);
+                    ui.heading("System Integration");
+                    ui.separator();
+                    ui.group(|ui| {
+                        let is_reg = crate::context_menu::ContextMenuManager::is_installed();
+                        if is_reg {
+                            ui.colored_label(Color32::from_rgb(0, 200, 100), "✔ Registered in context menu");
+                            if ui.button("Remove from Context Menu").clicked() {
+                                match crate::context_menu::ContextMenuManager::uninstall() {
+                                    Ok(msg) => self.status_message = Some((msg, false)),
+                                    Err(err) => self.status_message = Some((err, true)),
+                                }
+                            }
+                        } else {
+                            ui.label("Not registered in context menu");
+                            if ui.button("Register in Context Menu").clicked() {
+                                match crate::context_menu::ContextMenuManager::install() {
+                                    Ok(msg) => self.status_message = Some((msg, false)),
+                                    Err(err) => self.status_message = Some((err, true)),
+                                }
+                            }
+                        }
+
+                        if ui.button("Export .reg for Windows").on_hover_text("Export Windows registry file to register context menu on Windows").clicked() {
+                            if let Some(path) = rfd::FileDialog::new()
+                                .add_filter("Registry Script (*.reg)", &["reg"])
+                                .set_file_name("paa-viewer-context-menu.reg")
+                                .save_file()
+                            {
+                                let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("paa-viewer.exe"));
+                                let reg = crate::context_menu::ContextMenuManager::generate_windows_reg(&exe);
+                                if let Err(e) = std::fs::write(&path, reg) {
+                                    self.status_message = Some((format!("Failed to write .reg file: {e}"), true));
+                                } else {
+                                    self.status_message = Some((format!("Exported .reg file to {}", path.display()), false));
+                                }
+                            }
+                        }
+                    });
                 });
             });
 

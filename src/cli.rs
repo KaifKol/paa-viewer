@@ -163,8 +163,8 @@ pub fn parse_resize_str(s: &str) -> Result<ResizeOperation, String> {
         "pot-prev" | "pot_prev" => Ok(ResizeOperation::Pot(PotMode::Prev)),
         _ => {
             if let Ok(factor) = lower.parse::<f32>() {
-                if factor <= 0.0 {
-                    return Err("Scale factor must be greater than zero".into());
+                if !factor.is_finite() || factor <= 0.0 {
+                    return Err("Scale factor must be a finite number greater than zero".into());
                 }
                 return Ok(ResizeOperation::Factor(factor));
             }

@@ -85,14 +85,15 @@ impl PaaViewerApp {
                     let mut reader = std::io::BufReader::new(file);
                     match PaaImage::read(&mut reader) {
                         Ok(paa) => {
-                            self.metadata = Some(paa.metadata());
                             match paa.to_dynamic_image(0) {
                                 Ok(img) => {
+                                    self.metadata = Some(paa.metadata());
                                     self.file_path = Some(path);
                                     self.current_mip_level = 0;
                                     self.current_image = Some(img);
                                     self.paa_image = Some(paa);
                                     self.fit_to_window = true;
+                                    self.pan = Vec2::ZERO;
                                     self.update_texture(ctx);
                                     self.status_message = Some(("Loaded PAA file successfully".to_string(), false));
                                 }
@@ -119,6 +120,7 @@ impl PaaViewerApp {
                     self.current_mip_level = 0;
                     self.current_image = Some(img);
                     self.fit_to_window = true;
+                    self.pan = Vec2::ZERO;
                     self.update_texture(ctx);
                     self.status_message = Some(("Loaded image successfully".to_string(), false));
                 }
@@ -181,7 +183,17 @@ impl PaaViewerApp {
     }
 
     pub fn export_current_image(&mut self, path: PathBuf) {
-        if let Some(img) = &self.current_image {
+        let img_to_export = if self.current_mip_level != 0 {
+            if let Some(paa) = &self.paa_image {
+                paa.to_dynamic_image(0).ok()
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        let export_target = img_to_export.as_ref().or(self.current_image.as_ref());
+        if let Some(img) = export_target {
             let ext = path
                 .extension()
                 .and_then(|e| e.to_str())
@@ -507,7 +519,16 @@ impl eframe::App for PaaViewerApp {
                     ui.heading("Power of Two Alignment");
                     ui.separator();
 
-                    if let Some(img) = self.current_image.clone() {
+                    let base_for_resize = if self.current_mip_level != 0 {
+                        if let Some(paa) = &self.paa_image {
+                            paa.to_dynamic_image(0).ok()
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    };
+                    if let Some(img) = base_for_resize.or_else(|| self.current_image.clone()) {
                         let (w, h) = img.dimensions();
                         let next_w = next_power_of_two(w);
                         let next_h = next_power_of_two(h);
@@ -640,8 +661,7 @@ impl eframe::App for PaaViewerApp {
                 let image_rect = Rect::from_center_size(center, render_size);
 
                 // Draw checkerboard background for transparent textures
-                draw_checkerboard(&painter, image_rect);
-
+                draw_checkerboard(&painter, image_rect, viewport_rect);
                 // Draw Texture
                 let uv = Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0));
                 painter.image(texture.id(), image_rect, uv, Color32::WHITE);
@@ -735,33 +755,37 @@ impl eframe::App for PaaViewerApp {
     }
 }
 
-fn draw_checkerboard(painter: &egui::Painter, rect: Rect) {
+fn draw_checkerboard(painter: &egui::Painter, rect: Rect, viewport: Rect) {
     let check_size = 12.0;
     let col1 = Color32::from_rgb(40, 40, 40);
     let col2 = Color32::from_rgb(55, 55, 55);
 
-    painter.rect_filled(rect, CornerRadius::ZERO, col1);
+    let visible = rect.intersect(viewport);
+    if visible.is_negative() || visible.width() <= 0.0 || visible.height() <= 0.0 {
+        return;
+    }
 
-    let start_x = rect.min.x;
-    let start_y = rect.min.y;
-    let end_x = rect.max.x;
-    let end_y = rect.max.y;
+    painter.rect_filled(visible, CornerRadius::ZERO, col1);
 
-    let cols = ((end_x - start_x) / check_size).ceil() as usize;
-    let rows = ((end_y - start_y) / check_size).ceil() as usize;
+    let start_x_idx = ((visible.min.x - rect.min.x) / check_size).floor() as i64;
+    let end_x_idx = ((visible.max.x - rect.min.x) / check_size).ceil() as i64;
+    let start_y_idx = ((visible.min.y - rect.min.y) / check_size).floor() as i64;
+    let end_y_idx = ((visible.max.y - rect.min.y) / check_size).ceil() as i64;
 
-    for y in 0..rows {
-        for x in 0..cols {
-            if (x + y) % 2 == 1 {
+    for y in start_y_idx..end_y_idx {
+        for x in start_x_idx..end_x_idx {
+            if (x + y).rem_euclid(2) == 1 {
                 let cell_min = Pos2::new(
-                    (start_x + x as f32 * check_size).min(end_x),
-                    (start_y + y as f32 * check_size).min(end_y),
+                    (rect.min.x + x as f32 * check_size).max(visible.min.x),
+                    (rect.min.y + y as f32 * check_size).max(visible.min.y),
                 );
                 let cell_max = Pos2::new(
-                    (cell_min.x + check_size).min(end_x),
-                    (cell_min.y + check_size).min(end_y),
+                    (rect.min.x + (x + 1) as f32 * check_size).min(visible.max.x),
+                    (rect.min.y + (y + 1) as f32 * check_size).min(visible.max.y),
                 );
-                painter.rect_filled(Rect::from_min_max(cell_min, cell_max), CornerRadius::ZERO, col2);
+                if cell_max.x > cell_min.x && cell_max.y > cell_min.y {
+                    painter.rect_filled(Rect::from_min_max(cell_min, cell_max), CornerRadius::ZERO, col2);
+                }
             }
         }
     }

@@ -106,6 +106,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 for (p, err) in &report.errors {
                     eprintln!("  - {}: {err}", p.display());
                 }
+                return Err(format!("Batch conversion completed with {} error(s)", report.failed).into());
             }
         }
         Some(Commands::ContextMenu { action }) => match action {

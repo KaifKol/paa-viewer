@@ -544,9 +544,9 @@ unsafe fn lzo1x_decompress_safe(
                             continue;
                         } else if state != 4 {
                             next = t & 3;
-                            m_pos = op.sub(1);
-                            m_pos = m_pos.offset(-((t >> 2) as isize));
-                            m_pos = m_pos.offset(-((i32::from(*ip) << 2) as isize));
+                            m_pos = op.wrapping_sub(1);
+                            m_pos = m_pos.wrapping_offset(-((t >> 2) as isize));
+                            m_pos = m_pos.wrapping_offset(-((i32::from(*ip) << 2) as isize));
                             ip = ip.add(1);
                             if m_pos < out {
                                 current_block = 48;
@@ -561,18 +561,18 @@ unsafe fn lzo1x_decompress_safe(
                             op = op.add(2);
                         } else {
                             next = t & 3;
-                            m_pos = op.offset(-(1 + 0x800));
-                            m_pos = m_pos.offset(-((t >> 2) as isize));
-                            m_pos = m_pos.offset(-((i32::from(*ip) << 2) as isize));
+                            m_pos = op.wrapping_offset(-(1 + 0x800));
+                            m_pos = m_pos.wrapping_offset(-((t >> 2) as isize));
+                            m_pos = m_pos.wrapping_offset(-((i32::from(*ip) << 2) as isize));
                             ip = ip.add(1);
                             t = 3;
                             current_block = 36;
                         }
                     } else if t >= 64 {
                         next = t & 3;
-                        m_pos = op.sub(1);
-                        m_pos = m_pos.offset(-(((t >> 2) & 7) as isize));
-                        m_pos = m_pos.offset(-((i32::from(*ip) << 3) as isize));
+                        m_pos = op.wrapping_sub(1);
+                        m_pos = m_pos.wrapping_offset(-(((t >> 2) & 7) as isize));
+                        m_pos = m_pos.wrapping_offset(-((i32::from(*ip) << 3) as isize));
                         ip = ip.add(1);
                         t = (t >> 5) - 1 + 2;
                         current_block = 36;
@@ -601,15 +601,15 @@ unsafe fn lzo1x_decompress_safe(
                                 break;
                             }
                         }
-                        m_pos = op.sub(1);
+                        m_pos = op.wrapping_sub(1);
                         next = get_unaligned_le16(ip) as usize;
                         ip = ip.add(2);
-                        m_pos = m_pos.offset(-((next >> 2) as isize));
+                        m_pos = m_pos.wrapping_offset(-((next >> 2) as isize));
                         next &= 3;
                         current_block = 36;
                     } else {
                         m_pos = op;
-                        m_pos = m_pos.offset(-(((t & 8) << 11) as isize));
+                        m_pos = m_pos.wrapping_offset(-(((t & 8) << 11) as isize));
                         t = (t & 7) + 2;
                         if t == 2 {
                             let mut offset: usize;
@@ -636,13 +636,13 @@ unsafe fn lzo1x_decompress_safe(
                         }
                         next = get_unaligned_le16(ip) as usize;
                         ip = ip.add(2);
-                        m_pos = m_pos.offset(-((next >> 2) as isize));
+                        m_pos = m_pos.wrapping_offset(-((next >> 2) as isize));
                         next &= 3;
                         if std::ptr::eq(m_pos, op) {
                             current_block = 21;
                             break;
                         }
-                        m_pos = m_pos.sub(0x4000);
+                        m_pos = m_pos.wrapping_sub(0x4000);
                         current_block = 36;
                     }
 
@@ -651,7 +651,7 @@ unsafe fn lzo1x_decompress_safe(
                             current_block = 48;
                             break;
                         }
-                        let oe: *mut u8 = op.add(t);
+                        let oe: *mut u8 = op.wrapping_add(t);
                         if ((op_end as isize - op as isize) as usize) < t {
                             current_block = 63;
                             continue;

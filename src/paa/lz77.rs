@@ -113,7 +113,7 @@ pub fn compress(input: &[u8], out_buf: &mut [u8]) -> Result<usize, PaaError> {
         return Err(PaaError::CompressionFailed("Output buffer too small for checksum".into()));
     }
 
-    let checksum_bytes = checksum.to_ne_bytes();
+    let checksum_bytes = checksum.to_le_bytes();
     out_buf[po..po + 4].copy_from_slice(&checksum_bytes);
     po += 4;
 
@@ -121,6 +121,9 @@ pub fn compress(input: &[u8], out_buf: &mut [u8]) -> Result<usize, PaaError> {
 }
 
 pub fn decompress(input: &[u8], out_buf: &mut [u8]) -> Result<usize, PaaError> {
+    if input.is_empty() && out_buf.is_empty() {
+        return Ok(0);
+    }
     let outlen = out_buf.len();
     let mut flag: u8 = 0;
     let mut rpos: usize;
@@ -210,6 +213,14 @@ pub fn decompress(input: &[u8], out_buf: &mut [u8]) -> Result<usize, PaaError> {
 
     if pi + 3 >= input.len() {
         return Err(PaaError::DecompressionFailed("Cannot read checksum: unexpected end of input".into()));
+    }
+
+    let stored_checksum = u32::from_le_bytes([input[pi], input[pi + 1], input[pi + 2], input[pi + 3]]);
+    let calc_checksum = out_buf.iter().fold(0u32, |acc, &b| acc.wrapping_add(u32::from(b)));
+    if stored_checksum != calc_checksum {
+        return Err(PaaError::DecompressionFailed(format!(
+            "LZ77 checksum mismatch: stored {stored_checksum:#010x}, calculated {calc_checksum:#010x}"
+        )));
     }
 
     Ok(pi + 4)

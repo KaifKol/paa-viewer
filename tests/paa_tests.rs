@@ -226,3 +226,114 @@ fn test_convert_pipeline_png_to_paa_and_back() {
     // Clean up
     let _ = std::fs::remove_dir_all(&temp_dir);
 }
+
+#[test]
+fn test_paa_argb4444_colors_not_swapped() {
+    let mut img = RgbaImage::new(16, 16);
+    // Pure red pixel
+    img.put_pixel(0, 0, Rgba([255, 0, 0, 255]));
+    // Pure blue pixel
+    img.put_pixel(1, 0, Rgba([0, 0, 255, 255]));
+
+    let dynamic = DynamicImage::ImageRgba8(img);
+    let paa = PaaImage::from_dynamic_image(&dynamic, PaXType::ARGB4, false).expect("ARGB4 creation failed");
+
+    let mut buffer = Cursor::new(Vec::new());
+    paa.write(&mut buffer).expect("write failed");
+    buffer.set_position(0);
+
+    let read_paa = PaaImage::read(&mut buffer).expect("read failed");
+    let decoded = read_paa.to_dynamic_image(0).expect("decode failed").to_rgba8();
+
+    let red_pixel = decoded.get_pixel(0, 0);
+    assert!(red_pixel[0] >= 240, "Red channel must be high, got {}", red_pixel[0]);
+    assert!(red_pixel[2] <= 16, "Blue channel must be low, got {}", red_pixel[2]);
+
+    let blue_pixel = decoded.get_pixel(1, 0);
+    assert!(blue_pixel[2] >= 240, "Blue channel must be high, got {}", blue_pixel[2]);
+    assert!(blue_pixel[0] <= 16, "Red channel must be low, got {}", blue_pixel[0]);
+}
+
+#[test]
+fn test_paa_graya_alpha_preserved() {
+    let mut img = RgbaImage::new(16, 16);
+    img.put_pixel(0, 0, Rgba([200, 200, 200, 100]));
+
+    let dynamic = DynamicImage::ImageRgba8(img);
+    let paa = PaaImage::from_dynamic_image(&dynamic, PaXType::GRAYA, false).expect("GRAYA creation failed");
+
+    let mut buffer = Cursor::new(Vec::new());
+    paa.write(&mut buffer).expect("write failed");
+    buffer.set_position(0);
+
+    let read_paa = PaaImage::read(&mut buffer).expect("read failed");
+    let decoded = read_paa.to_dynamic_image(0).expect("decode failed").to_rgba8();
+
+    let pixel = decoded.get_pixel(0, 0);
+    assert_eq!(pixel[3], 100, "Alpha channel must be preserved in GRAYA (0x8080 AI88)");
+    assert!((pixel[0] as i32 - 200).abs() <= 2, "Grayscale value should be preserved");
+}
+
+#[test]
+fn test_rectangular_mipmap_generation() {
+    let img = create_test_image(512, 16, false);
+    let paa = PaaImage::from_dynamic_image(&img, PaXType::DXT1, true).expect("creation failed");
+
+    // For 512x16, mipmaps should not stop at 256x4. It should continue:
+    // Level 0: 512x16
+    // Level 1: 256x8
+    // Level 2: 128x4
+    // Level 3: 64x4
+    // Level 4: 32x4
+    // Level 5: 16x4
+    // Level 6: 8x4
+    // Level 7: 4x4
+    assert!(paa.maps.len() >= 8, "Expected at least 8 mipmap levels for 512x16, got {}", paa.maps.len());
+    let last = paa.maps.last().unwrap();
+    assert_eq!(last.width(PaXType::DXT1), 4);
+    assert_eq!(last.height(), 4);
+}
+
+#[test]
+fn test_uncompressed_non_dxt_roundtrip() {
+    let img = create_test_image(16, 16, true);
+    let mip = paa_viewer::paa::Mipmap::from_rgba_image(&img.to_rgba8(), PaXType::ARGB8, false).expect("mip creation");
+    assert!(!mip.is_compressed(PaXType::ARGB8));
+
+    let decoded = mip.to_rgba_image(PaXType::ARGB8).expect("uncompressed decode failed");
+    assert_eq!(decoded.dimensions(), (16, 16));
+    assert_eq!(decoded.get_pixel(0, 0), img.to_rgba8().get_pixel(0, 0));
+}
+
+#[test]
+fn test_cli_resize_nan_inf() {
+    assert!(paa_viewer::cli::parse_resize_str("nan").is_err());
+    assert!(paa_viewer::cli::parse_resize_str("inf").is_err());
+    assert!(paa_viewer::cli::parse_resize_str("-1.0").is_err());
+    assert!(paa_viewer::cli::parse_resize_str("0").is_err());
+    assert!(paa_viewer::cli::parse_resize_str("0.5").is_ok());
+}
+
+#[test]
+fn test_next_power_of_two_extreme() {
+    let p = next_power_of_two(2_147_483_649);
+    assert!(p.is_power_of_two(), "next_power_of_two must always be a power of two");
+
+    let near = nearest_power_of_two(2_147_483_649);
+    assert!(near.is_power_of_two(), "nearest_power_of_two must always be a power of two");
+}
+
+#[test]
+fn test_fitpad_zero_dimensions_no_panic() {
+    let zero_img = DynamicImage::new_rgba8(0, 0);
+    let res = resize_pot(&zero_img, PotMode::FitPad { target_w: 64, target_h: 64 }, ResizeFilter::Nearest);
+    assert_eq!(res.dimensions(), (64, 64));
+}
+
+#[test]
+fn test_lz77_empty_roundtrip() {
+    let mut decomp = Vec::new();
+    let res = paa_viewer::paa::lz77::decompress(&[], &mut decomp);
+    assert!(res.is_ok());
+    assert_eq!(res.unwrap(), 0);
+}

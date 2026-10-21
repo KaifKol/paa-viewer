@@ -77,7 +77,7 @@ impl PaXType {
             }
             Self::ARGB5 | Self::ARGB4 => width * height * 2,
             Self::ARGB8 => width * height * 4,
-            Self::GRAYA => width * height,
+            Self::GRAYA => width * height * 2,
         }
     }
 
@@ -151,7 +151,7 @@ impl PaXType {
                     let g = u16::from(rgba_data[i * 4 + 1] >> 4);
                     let b = u16::from(rgba_data[i * 4 + 2] >> 4);
                     let a = u16::from(rgba_data[i * 4 + 3] >> 4);
-                    let pixel = (a << 12) | (b << 8) | (g << 4) | r;
+                    let pixel = (a << 12) | (r << 8) | (g << 4) | b;
                     let bytes = pixel.to_le_bytes();
                     output[offset] = bytes[0];
                     output[offset + 1] = bytes[1];
@@ -170,13 +170,16 @@ impl PaXType {
                 Ok(())
             }
             Self::GRAYA => {
-                let max_pixels = (width * height).min((rgba_data.len() / 4).min(output.len()));
+                let max_pixels = (width * height).min((rgba_data.len() / 4).min(output.len() / 2));
                 for i in 0..max_pixels {
+                    let offset = i * 2;
                     let r = f32::from(rgba_data[i * 4]);
                     let g = f32::from(rgba_data[i * 4 + 1]);
                     let b = f32::from(rgba_data[i * 4 + 2]);
                     let gray = (0.2126 * r + 0.7152 * g + 0.0722 * b).round() as u8;
-                    output[i] = gray;
+                    let a = rgba_data[i * 4 + 3];
+                    output[offset] = gray;
+                    output[offset + 1] = a;
                 }
                 Ok(())
             }
@@ -225,9 +228,9 @@ impl PaXType {
                     let offset = i * 2;
                     if offset + 1 < data.len() && i * 4 + 3 < output.len() {
                         let pixel = u16::from_le_bytes([data[offset], data[offset + 1]]);
-                        let r = (pixel & 0x0F) as u8;
+                        let r = ((pixel >> 8) & 0x0F) as u8;
                         let g = ((pixel >> 4) & 0x0F) as u8;
-                        let b = ((pixel >> 8) & 0x0F) as u8;
+                        let b = (pixel & 0x0F) as u8;
                         let a = ((pixel >> 12) & 0x0F) as u8;
 
                         output[i * 4] = (r << 4) | r;
@@ -254,12 +257,14 @@ impl PaXType {
             Self::GRAYA => {
                 let pixel_count = width * height;
                 for i in 0..pixel_count {
-                    if i < data.len() && i * 4 + 3 < output.len() {
-                        let gray = data[i];
+                    let offset = i * 2;
+                    if offset + 1 < data.len() && i * 4 + 3 < output.len() {
+                        let gray = data[offset];
+                        let alpha = data[offset + 1];
                         output[i * 4] = gray;
                         output[i * 4 + 1] = gray;
                         output[i * 4 + 2] = gray;
-                        output[i * 4 + 3] = 255;
+                        output[i * 4 + 3] = alpha;
                     }
                 }
                 Ok(())

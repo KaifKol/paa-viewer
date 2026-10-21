@@ -54,6 +54,9 @@ impl Taggs {
                 .to_string();
 
             let length = reader.read_u32::<LittleEndian>()? as usize;
+            if length > 16 * 1024 * 1024 {
+                return Err(PaaError::CorruptedData(format!("Tag length exceeds 16MB limit: {length} bytes")));
+            }
             let mut data = vec![0u8; length];
             reader.read_exact(&mut data)?;
 
@@ -84,7 +87,7 @@ impl Taggs {
         // Tag "CGVA" or "AVGC"
         let data = self.entries.get("CGVA").or_else(|| self.entries.get("AVGC"))?;
         if data.len() >= 4 {
-            Some([data[0], data[1], data[2], data[3]])
+            Some([data[2], data[1], data[0], data[3]])
         } else {
             None
         }
@@ -94,7 +97,7 @@ impl Taggs {
         // Tag "CXAM" or "MAXC"
         let data = self.entries.get("CXAM").or_else(|| self.entries.get("MAXC"))?;
         if data.len() >= 4 {
-            Some([data[0], data[1], data[2], data[3]])
+            Some([data[2], data[1], data[0], data[3]])
         } else {
             None
         }
@@ -134,7 +137,7 @@ impl Taggs {
                 let (display_name, desc, color) = match raw_name.as_str() {
                     "CGVA" | "AVGC" => {
                         let col = if data.len() >= 4 {
-                            Some([data[0], data[1], data[2], data[3]])
+                            Some([data[2], data[1], data[0], data[3]])
                         } else {
                             None
                         };
@@ -146,7 +149,7 @@ impl Taggs {
                     }
                     "CXAM" | "MAXC" => {
                         let col = if data.len() >= 4 {
-                            Some([data[0], data[1], data[2], data[3]])
+                            Some([data[2], data[1], data[0], data[3]])
                         } else {
                             None
                         };

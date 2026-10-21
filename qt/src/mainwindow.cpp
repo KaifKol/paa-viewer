@@ -51,29 +51,38 @@ void TextureCanvas::setImage(const QImage& img, ChannelMode mode) {
         int w = displayImg.width();
         int h = displayImg.height();
         for (int y = 0; y < h; ++y) {
-            QRgb* line = reinterpret_cast<QRgb*>(displayImg.scanLine(y));
+            uchar* line = displayImg.scanLine(y);
             for (int x = 0; x < w; ++x) {
-                QRgb p = line[x];
-                int r = qRed(p);
-                int g = qGreen(p);
-                int b = qBlue(p);
-                int a = qAlpha(p);
+                uchar* px = line + x * 4;
+                uchar r = px[0];
+                uchar g = px[1];
+                uchar b = px[2];
+                uchar a = px[3];
 
                 switch (mode) {
                     case ChannelMode::Rgb:
-                        line[x] = qRgba(r, g, b, 255);
+                        px[3] = 255;
                         break;
                     case ChannelMode::Red:
-                        line[x] = qRgba(r, 0, 0, 255);
+                        px[1] = 0;
+                        px[2] = 0;
+                        px[3] = 255;
                         break;
                     case ChannelMode::Green:
-                        line[x] = qRgba(0, g, 0, 255);
+                        px[0] = 0;
+                        px[2] = 0;
+                        px[3] = 255;
                         break;
                     case ChannelMode::Blue:
-                        line[x] = qRgba(0, 0, b, 255);
+                        px[0] = 0;
+                        px[1] = 0;
+                        px[3] = 255;
                         break;
                     case ChannelMode::Alpha:
-                        line[x] = qRgba(a, a, a, 255);
+                        px[0] = a;
+                        px[1] = a;
+                        px[2] = a;
+                        px[3] = 255;
                         break;
                     default:
                         break;
@@ -112,8 +121,8 @@ void TextureCanvas::mouseMoveEvent(QMouseEvent* event) {
     }
 
     QPointF scenePos = mapToScene(event->pos());
-    int px = static_cast<int>(scenePos.x());
-    int py = static_cast<int>(scenePos.y());
+    int px = static_cast<int>(std::floor(scenePos.x()));
+    int py = static_cast<int>(std::floor(scenePos.y()));
 
     if (px >= 0 && px < m_sourceImage.width() && py >= 0 && py < m_sourceImage.height()) {
         emit pixelHovered(px, py, m_sourceImage.pixelColor(px, py));
@@ -128,7 +137,8 @@ void TextureCanvas::leaveEvent(QEvent* event) {
 }
 
 void TextureCanvas::drawBackground(QPainter* painter, const QRectF& rect) {
-    painter->fillRect(rect, QColor(30, 30, 46));
+    QColor bg = palette().color(QPalette::Window);
+    painter->fillRect(rect, bg);
 
     if (m_pixmapItem->pixmap().isNull()) return;
 
@@ -137,8 +147,9 @@ void TextureCanvas::drawBackground(QPainter* painter, const QRectF& rect) {
     if (intersect.isEmpty()) return;
 
     const double checkSize = 16.0;
-    QColor c1(40, 40, 55);
-    QColor c2(60, 60, 80);
+    bool isDark = bg.lightness() < 128;
+    QColor c1 = isDark ? QColor(40, 40, 40) : QColor(220, 220, 220);
+    QColor c2 = isDark ? QColor(55, 55, 55) : QColor(245, 245, 245);
 
     int startX = static_cast<int>(std::floor(intersect.left() / checkSize));
     int endX = static_cast<int>(std::ceil(intersect.right() / checkSize));
@@ -338,6 +349,18 @@ void MainWindow::loadFile(const QString& filePath) {
 
     m_handle = paa_ffi_load(filePath.toUtf8().constData());
     if (!m_handle) {
+        m_currentFilePath.clear();
+        m_currentImage = QImage();
+        m_canvas->setImage(QImage(), m_channelMode);
+        m_mipmapTable->setRowCount(0);
+        m_dimsLabel->setText("-");
+        m_formatLabel->setText("-");
+        m_potLabel->setText("-");
+        m_aspectLabel->setText("-");
+        m_fileSizeLabel->setText("-");
+        m_avgColorSwatch->setStyleSheet("border: 1px solid gray; background-color: transparent; border-radius: 4px;");
+        m_maxColorSwatch->setStyleSheet("border: 1px solid gray; background-color: transparent; border-radius: 4px;");
+        setWindowTitle(tr("PAA Viewer (Qt6)"));
         QMessageBox::critical(this, tr("Error"), tr("Failed to open or parse texture file: %1").arg(filePath));
         return;
     }
@@ -425,7 +448,12 @@ void MainWindow::updateTextureView() {
         return;
     }
 
-    QByteArray buffer(mw * mh * 4, 0);
+    uint64_t bufSize64 = static_cast<uint64_t>(mw) * static_cast<uint64_t>(mh) * 4;
+    if (bufSize64 == 0 || bufSize64 > static_cast<uint64_t>(std::numeric_limits<qsizetype>::max())) {
+        statusBar()->showMessage(tr("Texture dimensions are too large for memory allocation"), 4000);
+        return;
+    }
+    QByteArray buffer(static_cast<qsizetype>(bufSize64), 0);
     if (!paa_ffi_decode_mipmap_rgba(m_handle, m_currentMipLevel, reinterpret_cast<uint8_t*>(buffer.data()), buffer.size())) {
         statusBar()->showMessage(tr("Failed to decode mipmap level %1").arg(m_currentMipLevel), 4000);
         return;
@@ -465,7 +493,22 @@ void MainWindow::onExportFile() {
             QMessageBox::information(this, tr("Success"), tr("Exported PAA successfully to %1").arg(path));
         }
     } else {
-        if (m_currentImage.save(path)) {
+        QImage exportImg = m_currentImage;
+        if (m_currentMipLevel != 0 && m_handle) {
+            uint32_t w0 = 0, h0 = 0;
+            size_t c0 = 0, u0 = 0;
+            bool comp0 = false;
+            if (paa_ffi_get_mipmap_info(m_handle, 0, &w0, &h0, &c0, &u0, &comp0)) {
+                uint64_t sz = static_cast<uint64_t>(w0) * static_cast<uint64_t>(h0) * 4;
+                if (sz > 0 && sz <= static_cast<uint64_t>(std::numeric_limits<qsizetype>::max())) {
+                    QByteArray buf0(static_cast<qsizetype>(sz), 0);
+                    if (paa_ffi_decode_mipmap_rgba(m_handle, 0, reinterpret_cast<uint8_t*>(buf0.data()), buf0.size())) {
+                        exportImg = QImage(reinterpret_cast<const uchar*>(buf0.constData()), w0, h0, QImage::Format_RGBA8888).copy();
+                    }
+                }
+            }
+        }
+        if (exportImg.save(path)) {
             QMessageBox::information(this, tr("Success"), tr("Saved image successfully to %1").arg(path));
         } else {
             QMessageBox::critical(this, tr("Export Error"), tr("Failed to save image to %1").arg(path));

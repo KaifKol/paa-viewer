@@ -44,12 +44,10 @@ pub unsafe extern "C" fn paa_ffi_load(path: *const c_char) -> *mut PaaFfiHandle 
         };
 
         let meta = paa.metadata();
-        let dyn_img = paa.to_dynamic_image(0).ok();
-
         Box::into_raw(Box::new(PaaFfiHandle {
             paa: Some(paa),
             metadata: Some(meta),
-            dynamic_img: dyn_img,
+            dynamic_img: None,
         }))
     } else {
         let dyn_img = match image::open(p) {
@@ -182,8 +180,9 @@ pub unsafe extern "C" fn paa_ffi_get_mipmap_info(
             unsafe {
                 if !out_width.is_null() { *out_width = img.width(); }
                 if !out_height.is_null() { *out_height = img.height(); }
-                if !out_comp_size.is_null() { *out_comp_size = (img.width() * img.height() * 4) as usize; }
-                if !out_uncomp_size.is_null() { *out_uncomp_size = (img.width() * img.height() * 4) as usize; }
+                let sz = (img.width() as usize).saturating_mul(img.height() as usize).saturating_mul(4);
+                if !out_comp_size.is_null() { *out_comp_size = sz; }
+                if !out_uncomp_size.is_null() { *out_uncomp_size = sz; }
                 if !out_is_compressed.is_null() { *out_is_compressed = false; }
             }
             return true;
@@ -308,19 +307,16 @@ pub unsafe extern "C" fn paa_ffi_convert(
     generate_mipmaps: bool,
 ) -> *mut c_char {
     if input_path.is_null() || output_path.is_null() {
-        return match CString::new("Null input or output path") {
-            Ok(c) => c.into_raw(),
-            Err(_) => std::ptr::null_mut(),
-        };
+        return safe_c_string("Null input or output path");
     }
 
     let in_str = match unsafe { CStr::from_ptr(input_path).to_str() } {
         Ok(s) => s,
-        Err(e) => return CString::new(format!("Invalid input path UTF-8: {e}")).unwrap().into_raw(),
+        Err(e) => return safe_c_string(format!("Invalid input path UTF-8: {e}")),
     };
     let out_str = match unsafe { CStr::from_ptr(output_path).to_str() } {
         Ok(s) => s,
-        Err(e) => return CString::new(format!("Invalid output path UTF-8: {e}")).unwrap().into_raw(),
+        Err(e) => return safe_c_string(format!("Invalid output path UTF-8: {e}")),
     };
 
     let fmt_opt = if !format_name.is_null() {
@@ -353,11 +349,20 @@ pub unsafe extern "C" fn paa_ffi_convert(
         !generate_mipmaps,
     ) {
         Ok(o) => o,
-        Err(e) => return CString::new(format!("Options error: {e}")).unwrap().into_raw(),
+        Err(e) => return safe_c_string(format!("Options error: {e}")),
     };
 
     match convert_image(Path::new(in_str), Path::new(out_str), &opts) {
         Ok(_) => std::ptr::null_mut(), // Success: returns null
-        Err(e) => CString::new(e).unwrap().into_raw(),
+        Err(e) => safe_c_string(e),
+    }
+}
+
+fn safe_c_string(msg: impl AsRef<str>) -> *mut c_char {
+    let bytes = msg.as_ref().as_bytes();
+    let sanitized: Vec<u8> = bytes.iter().copied().map(|b| if b == 0 { b'?' } else { b }).collect();
+    match CString::new(sanitized) {
+        Ok(c) => c.into_raw(),
+        Err(_) => std::ptr::null_mut(),
     }
 }

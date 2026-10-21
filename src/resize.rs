@@ -37,8 +37,8 @@ pub fn nearest_power_of_two(n: u32) -> u32 {
         return 1;
     }
     let next = next_power_of_two(n);
-    let prev = next / 2;
-    if (next - n) < (n - prev) {
+    let prev = (next / 2).max(1);
+    if next.abs_diff(n) < n.abs_diff(prev) {
         next
     } else {
         prev
@@ -49,7 +49,7 @@ pub fn next_power_of_two(n: u32) -> u32 {
     if n <= 1 {
         return 1;
     }
-    1u32.checked_shl(32 - (n - 1).leading_zeros()).unwrap_or(u32::MAX)
+    n.checked_next_power_of_two().unwrap_or(1 << 31)
 }
 
 pub fn prev_power_of_two(n: u32) -> u32 {
@@ -107,10 +107,14 @@ pub fn resize_pot(img: &DynamicImage, mode: PotMode, filter: ResizeFilter) -> Dy
             let tw = target_w.max(1);
             let th = target_h.max(1);
 
+            if w == 0 || h == 0 {
+                let out = RgbaImage::from_pixel(tw, th, Rgba([0, 0, 0, 0]));
+                return DynamicImage::ImageRgba8(out);
+            }
+
             let scale_x = tw as f32 / w as f32;
             let scale_y = th as f32 / h as f32;
             let scale = scale_x.min(scale_y);
-
             let scaled_w = ((w as f32 * scale).round() as u32).clamp(1, tw);
             let scaled_h = ((h as f32 * scale).round() as u32).clamp(1, th);
 

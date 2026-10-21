@@ -108,22 +108,34 @@ pub fn convert_image(
     let final_dims = (img.width(), img.height());
 
     // Determine target format
-    let target = match options.target {
-        TargetFormat::Auto => {
-            let ext = output_path
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|s| s.to_ascii_lowercase())
-                .unwrap_or_default();
+    let ext = output_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|s| s.to_ascii_lowercase())
+        .unwrap_or_default();
 
-            match ext.as_str() {
-                "paa" | "pac" => TargetFormat::Paa(None),
-                "png" => TargetFormat::Png,
-                "jpg" | "jpeg" => TargetFormat::Jpeg { quality: 90 },
-                "tga" => TargetFormat::Tga,
-                "bmp" => TargetFormat::Bmp,
-                "webp" => TargetFormat::WebP,
-                _ => return Err(format!("Unknown or unsupported output extension for: {}", output_path.display())),
+    let target = match options.target {
+        TargetFormat::Auto => match ext.as_str() {
+            "paa" | "pac" => TargetFormat::Paa(None),
+            "png" => TargetFormat::Png,
+            "jpg" | "jpeg" => TargetFormat::Jpeg { quality: 90 },
+            "tga" => TargetFormat::Tga,
+            "bmp" => TargetFormat::Bmp,
+            "webp" => TargetFormat::WebP,
+            _ => return Err(format!("Unknown or unsupported output extension for: {}", output_path.display())),
+        },
+        TargetFormat::Paa(pax) => {
+            if ext != "paa" && ext != "pac" && !ext.is_empty() {
+                match ext.as_str() {
+                    "png" => TargetFormat::Png,
+                    "jpg" | "jpeg" => TargetFormat::Jpeg { quality: 90 },
+                    "tga" => TargetFormat::Tga,
+                    "bmp" => TargetFormat::Bmp,
+                    "webp" => TargetFormat::WebP,
+                    _ => TargetFormat::Paa(pax),
+                }
+            } else {
+                TargetFormat::Paa(pax)
             }
         }
         other => other,
@@ -217,15 +229,23 @@ pub fn batch_convert(
 
     std::fs::create_dir_all(output_dir).ok();
 
+    let mut used_names = std::collections::HashSet::new();
+
     for path in input_paths {
         let file_stem = path
             .file_stem()
             .and_then(|s| s.to_str())
             .unwrap_or("image");
 
-        let out_file_name = format!("{file_stem}.{target_extension}");
-        let out_path = output_dir.join(out_file_name);
-
+        let mut out_file_name = format!("{file_stem}.{target_extension}");
+        let mut out_path = output_dir.join(&out_file_name);
+        let mut counter = 1;
+        while used_names.contains(&out_path) {
+            out_file_name = format!("{file_stem}_{counter}.{target_extension}");
+            out_path = output_dir.join(&out_file_name);
+            counter += 1;
+        }
+        used_names.insert(out_path.clone());
         match convert_image(path, &out_path, options) {
             Ok(rep) => reports.push(rep),
             Err(err) => errors.push((path.clone(), err)),

@@ -101,17 +101,16 @@ impl PaaImage {
 
         // Calculate offset where SFFO begins
         // Format (2) + Tags (each is 4 + 4 + 4 + len) + SFFO header (4 + 4 + 4 + 64) + palette (2)
-        let sffo_tag_len = 16 * 4; // 16 offsets * 4 bytes
+        let offset_count = self.maps.len().max(16);
+        let sffo_tag_len = offset_count * 4;
         writer.write_all(super::taggs::SIGNATURE_TAGG)?;
         writer.write_all(b"SFFO")?;
         writer.write_u32::<LittleEndian>(sffo_tag_len as u32)?;
 
-        // Placeholders for 16 offsets
         let sffo_offsets_pos = writer.stream_position()?;
-        let mut calculated_offsets = Vec::with_capacity(16);
+        let mut calculated_offsets = Vec::with_capacity(offset_count);
 
-        // First mipmap starts after the 16 offset u32s + 2 bytes palette
-        let mut next_offset = sffo_offsets_pos + (16 * 4) + 2;
+        let mut next_offset = sffo_offsets_pos + (sffo_tag_len as u64) + 2;
 
         for mip in &self.maps {
             calculated_offsets.push(next_offset as u32);
@@ -119,7 +118,7 @@ impl PaaImage {
             next_offset += 2 + 2 + 3 + (mip.data.len() as u64);
         }
 
-        while calculated_offsets.len() < 16 {
+        while calculated_offsets.len() < offset_count {
             calculated_offsets.push(0);
         }
 
@@ -135,9 +134,8 @@ impl PaaImage {
             mip.write(writer)?;
         }
 
-        // Trailing bytes (end of file marker)
-        writer.write_u32::<LittleEndian>(0)?;
-        writer.write_u16::<LittleEndian>(0)?;
+        // Trailing bytes (end of file marker: 7 bytes of zeros: 2B width, 2B height, 3B size)
+        writer.write_all(&[0u8; 7])?;
 
         Ok(())
     }
@@ -191,7 +189,7 @@ impl PaaImage {
         let mut paa = Self::new(format);
 
         // Insert tags
-        paa.taggs.entries.insert("CGVA".to_string(), avg_color.to_vec());
+        paa.taggs.entries.insert("CGVA".to_string(), vec![avg_color[2], avg_color[1], avg_color[0], avg_color[3]]);
         paa.taggs.entries.insert("CXAM".to_string(), vec![255, 255, 255, 255]); // Arma standard
         if has_transparency {
             paa.taggs.entries.insert("GALF".to_string(), vec![1, 0, 0, 0]);
@@ -208,10 +206,9 @@ impl PaaImage {
         if generate_mipmaps {
             // Bohemia stops mipmaps at 4x4 for DXT or 1x1 for uncompressed
             let min_dim = if format.is_dxt() { 4 } else { 1 };
-            while current_w > min_dim && current_h > min_dim && paa.maps.len() < 16 {
-                current_w = (current_w / 2).max(1);
-                current_h = (current_h / 2).max(1);
-
+            while (current_w > min_dim || current_h > min_dim) && paa.maps.len() < 16 {
+                current_w = (current_w / 2).max(min_dim);
+                current_h = (current_h / 2).max(min_dim);
                 current_img = image::imageops::resize(
                     &current_img,
                     current_w,

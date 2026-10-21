@@ -56,7 +56,7 @@ impl Mipmap {
         if format.is_dxt() {
             (self.raw_width & 0x8000) != 0
         } else {
-            true
+            self.data.len() != self.uncompressed_size(format)
         }
     }
 
@@ -186,13 +186,18 @@ impl Mipmap {
                 }
                 pixel_data.copy_from_slice(&self.data[..expected_size]);
             }
+        } else if self.data.len() == expected_size {
+            pixel_data.copy_from_slice(&self.data);
         } else {
             lz77::decompress(&self.data, &mut pixel_data)?;
         }
 
-        let mut rgba_buffer = vec![0u8; actual_width * actual_height * 4];
+        let buffer_len = actual_width
+            .checked_mul(actual_height)
+            .and_then(|p| p.checked_mul(4))
+            .ok_or(PaaError::InvalidDimensions(actual_width as u32, actual_height as u32))?;
+        let mut rgba_buffer = vec![0u8; buffer_len];
         format.decompress(&pixel_data, actual_width, actual_height, &mut rgba_buffer)?;
-
         RgbaImage::from_raw(actual_width as u32, actual_height as u32, rgba_buffer)
             .ok_or_else(|| PaaError::CorruptedData("Failed to construct RGBA image from buffer".into()))
     }

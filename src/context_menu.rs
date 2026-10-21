@@ -134,12 +134,12 @@ Exec="{exe_str}" %F
 [Desktop Action ConvertPng]
 Name=Convert to PNG (via PAA Viewer)
 Icon=image-png
-Exec="{exe_str}" convert "%f" "%f.png"
+Exec="{exe_str}" convert "%f"
 
 [Desktop Action ConvertPaa]
 Name=Convert to PAA (DXT5 POT)
 Icon=image-x-generic
-Exec="{exe_str}" convert "%f" "%f.paa" --format dxt5 --resize pot-nearest
+Exec="{exe_str}" convert "%f" --format dxt5 --resize pot-nearest
 "#
         );
         let _ = std::fs::write(kio_dir.join("paa-actions.desktop"), &kio_content);
@@ -225,7 +225,7 @@ Exec="{exe_str}" convert "%f" "%f.paa" --format dxt5 --resize pot-nearest
 @="Bohemia Interactive PAA Texture"
 
 [HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\DefaultIcon]
-@="\"{exe_str}\",0"
+@="{exe_str},0"
 
 [HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\shell\open\command]
 @="\"{exe_str}\" \"%1\""
@@ -233,39 +233,39 @@ Exec="{exe_str}" convert "%f" "%f.paa" --format dxt5 --resize pot-nearest
 ; Context Menu for .paa Files
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.paa\Shell\OpenWithPaaViewer]
 @="Open with PAA Viewer"
-"Icon"="\"{exe_str}\""
+"Icon"="{exe_str}"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.paa\Shell\OpenWithPaaViewer\command]
 @="\"{exe_str}\" \"%1\""
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.paa\Shell\ConvertToPng]
 @="Convert to PNG"
-"Icon"="\"{exe_str}\""
+"Icon"="{exe_str}"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.paa\Shell\ConvertToPng\command]
-@="\"{exe_str}\" convert \"%1\" \"%1.png\""
+@="\"{exe_str}\" convert \"%1\""
 
 ; Context Menu for standard images (Convert to PAA)
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.png\Shell\ConvertToPaa]
 @="Convert to PAA (DXT5 POT)"
-"Icon"="\"{exe_str}\""
+"Icon"="{exe_str}"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.png\Shell\ConvertToPaa\command]
-@="\"{exe_str}\" convert \"%1\" \"%1.paa\" --format dxt5 --resize pot-nearest"
+@="\"{exe_str}\" convert \"%1\" --format dxt5 --resize pot-nearest"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.jpg\Shell\ConvertToPaa]
 @="Convert to PAA (DXT1 POT)"
-"Icon"="\"{exe_str}\""
+"Icon"="{exe_str}"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.jpg\Shell\ConvertToPaa\command]
-@="\"{exe_str}\" convert \"%1\" \"%1.paa\" --format dxt1 --resize pot-nearest"
+@="\"{exe_str}\" convert \"%1\" --format dxt1 --resize pot-nearest"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.tga\Shell\ConvertToPaa]
 @="Convert to PAA (DXT5 POT)"
-"Icon"="\"{exe_str}\""
+"Icon"="{exe_str}"
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.tga\Shell\ConvertToPaa\command]
-@="\"{exe_str}\" convert \"%1\" \"%1.paa\" --format dxt5 --resize pot-nearest"
+@="\"{exe_str}\" convert \"%1\" --format dxt5 --resize pot-nearest"
 "#
         )
     }

@@ -282,11 +282,17 @@ impl PaaViewerApp {
 
 impl eframe::App for PaaViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Check for files forwarded from another instance (e.g. double click in file manager)
+        if let Some(path) = crate::single_instance::check_incoming_file() {
+            self.load_file(clean_path(path), ctx);
+            ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
+            ctx.request_repaint();
+        }
+
         // Load initial file on first frame
         if let Some(path) = self.initial_file_to_load.take() {
             self.load_file(path, ctx);
         }
-
         // Handle Drag & Drop of files
         let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
         if let Some(file) = dropped_files.first() {

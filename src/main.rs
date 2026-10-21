@@ -14,11 +14,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match args.command {
         None => {
-            // Default: run GUI, passing positional file argument if specified
-            run_gui(args.file)?;
+            if paa_viewer::single_instance::try_forward_to_existing(args.file.as_deref()) {
+                return Ok(());
+            }
+            paa_viewer::single_instance::start_listener();
+            let res = run_gui(args.file);
+            paa_viewer::single_instance::cleanup();
+            res?;
         }
         Some(Commands::Gui { file }) => {
-            run_gui(file)?;
+            if paa_viewer::single_instance::try_forward_to_existing(file.as_deref()) {
+                return Ok(());
+            }
+            paa_viewer::single_instance::start_listener();
+            let res = run_gui(file);
+            paa_viewer::single_instance::cleanup();
+            res?;
         }
         Some(Commands::Info { file, json }) => {
             let f = File::open(&file)

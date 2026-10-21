@@ -4,6 +4,7 @@ pub mod convert;
 pub mod gui;
 pub mod paa;
 pub mod resize;
+pub mod single_instance;
 
 pub use context_menu::ContextMenuManager;
 pub use convert::{batch_convert, convert_image, load_image, ConvertOptions, ConvertReport, ResizeOperation, TargetFormat};

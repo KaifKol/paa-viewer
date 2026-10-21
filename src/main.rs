@@ -42,6 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             resize,
             filter,
             no_mipmaps,
+            notify,
         }) => {
             let options = build_convert_options(
                 format,
@@ -58,7 +59,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             });
 
             println!("Converting '{}' -> '{}'...", input.display(), out_path.display());
-            let report = convert_image(&input, &out_path, &options)?;
+            let report = match convert_image(&input, &out_path, &options) {
+                Ok(r) => r,
+                Err(e) => {
+                    if notify {
+                        let title = "PAA Viewer Error";
+                        let msg = format!("Failed to convert '{}':\n{e}", input.display());
+                        ContextMenuManager::notify(title, &msg, true);
+                    }
+                    return Err(e.into());
+                }
+            };
 
             println!("Conversion completed successfully!");
             println!("  Format:     {}", report.target_format_name);
@@ -67,6 +78,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 report.final_dimensions.0, report.final_dimensions.1
             );
             println!("  File Size:  {} bytes -> {} bytes", report.input_size_bytes, report.output_size_bytes);
+
+            if notify {
+                let in_name = input.file_name().and_then(|s| s.to_str()).unwrap_or("image");
+                let out_name = out_path.file_name().and_then(|s| s.to_str()).unwrap_or("output");
+                let title = "PAA Viewer";
+                let msg = format!(
+                    "Converted: {in_name} -> {out_name}\n({}x{}, {})",
+                    report.final_dimensions.0,
+                    report.final_dimensions.1,
+                    report.target_format_name
+                );
+                ContextMenuManager::notify(title, &msg, false);
+            }
         }
         Some(Commands::Batch {
             input_dir,
@@ -77,6 +101,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             filter,
             no_mipmaps,
             recursive,
+            notify,
         }) => {
             let options = build_convert_options(
                 format,
@@ -106,7 +131,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 for (p, err) in &report.errors {
                     eprintln!("  - {}: {err}", p.display());
                 }
+                if notify {
+                    let title = "PAA Viewer Batch Error";
+                    let msg = format!("Batch conversion failed for {} file(s)", report.failed);
+                    ContextMenuManager::notify(title, &msg, true);
+                }
                 return Err(format!("Batch conversion completed with {} error(s)", report.failed).into());
+            }
+
+            if notify {
+                let title = "PAA Viewer Batch";
+                let msg = format!("Successfully converted {} files to {}", report.successful, to.to_uppercase());
+                ContextMenuManager::notify(title, &msg, false);
             }
         }
         Some(Commands::ContextMenu { action }) => match action {

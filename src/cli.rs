@@ -60,6 +60,9 @@ pub enum Commands {
 
         #[arg(long, help = "Disable automatic mipmap generation for PAA")]
         no_mipmaps: bool,
+
+        #[arg(long, help = "Show system desktop notification on completion")]
+        notify: bool,
     },
 
     #[command(about = "Batch convert a folder of images or PAA files")]
@@ -87,6 +90,9 @@ pub enum Commands {
 
         #[arg(long, help = "Process subdirectories recursively")]
         recursive: bool,
+
+        #[arg(long, help = "Show system desktop notification on completion")]
+        notify: bool,
     },
     #[command(about = "Manage system context menu and file association integration")]
     ContextMenu {

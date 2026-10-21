@@ -145,6 +145,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ContextMenuManager::notify(title, &msg, false);
             }
         }
+        Some(Commands::Install) => {
+            let msg = ContextMenuManager::install()?;
+            println!("{msg}");
+        }
+        Some(Commands::Uninstall) => {
+            let msg = ContextMenuManager::uninstall()?;
+            println!("{msg}");
+        }
         Some(Commands::ContextMenu { action }) => match action {
             ContextMenuAction::Install => {
                 let msg = ContextMenuManager::install()?;
@@ -161,6 +169,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 } else {
                     println!("PAA Viewer is NOT registered in system context menus.");
                 }
+            }
+            ContextMenuAction::AutoRegister => {
+                ContextMenuManager::auto_register_if_needed();
             }
             ContextMenuAction::ExportReg { output } => {
                 let exe = std::env::current_exe()?;

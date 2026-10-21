@@ -94,6 +94,12 @@ pub enum Commands {
         #[arg(long, help = "Show system desktop notification on completion")]
         notify: bool,
     },
+    #[command(about = "Register PAA Viewer as default double-click handler and install context menus")]
+    Install,
+
+    #[command(about = "Unregister PAA Viewer, remove file associations and context menus")]
+    Uninstall,
+
     #[command(about = "Manage system context menu and file association integration")]
     ContextMenu {
         #[command(subcommand)]
@@ -111,6 +117,8 @@ pub enum ContextMenuAction {
     #[command(about = "Check if PAA Viewer is registered in system context menus")]
     Status,
 
+    #[command(about = "Auto-register on application startup if not already registered or disabled")]
+    AutoRegister,
     #[command(about = "Export Windows registry file (.reg) for manual import")]
     ExportReg {
         #[arg(help = "Output path for .reg file", default_value = "paa-viewer-context-menu.reg")]

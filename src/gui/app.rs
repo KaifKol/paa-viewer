@@ -65,10 +65,11 @@ impl PaaViewerApp {
             export_generate_mipmaps: true,
         };
 
+        crate::context_menu::ContextMenuManager::auto_register_if_needed();
+
         if let Some(path) = initial_file {
             app.load_file(path, &_cc.egui_ctx);
         }
-
         app
     }
 
@@ -580,23 +581,27 @@ impl eframe::App for PaaViewerApp {
                     ui.group(|ui| {
                         let is_reg = crate::context_menu::ContextMenuManager::is_installed();
                         if is_reg {
-                            ui.colored_label(Color32::from_rgb(0, 200, 100), "✔ Registered in context menu");
-                            if ui.button("Remove from Context Menu").clicked() {
+                            ui.colored_label(Color32::from_rgb(0, 200, 100), "✔ Registered in system");
+                            ui.small("Double-click: opens PAA / PAC");
+                            ui.small("Right-click: converts PAA <-> PNG");
+                            ui.add_space(4.0);
+                            if ui.button("Remove from System").clicked() {
                                 match crate::context_menu::ContextMenuManager::uninstall() {
                                     Ok(msg) => self.status_message = Some((msg, false)),
                                     Err(err) => self.status_message = Some((err, true)),
                                 }
                             }
                         } else {
-                            ui.label("Not registered in context menu");
-                            if ui.button("Register in Context Menu").clicked() {
+                            ui.colored_label(Color32::from_rgb(255, 180, 0), "Not registered in system");
+                            ui.small("Click to enable double-click opening & context menus");
+                            ui.add_space(4.0);
+                            if ui.button("Register in System").clicked() {
                                 match crate::context_menu::ContextMenuManager::install() {
                                     Ok(msg) => self.status_message = Some((msg, false)),
                                     Err(err) => self.status_message = Some((err, true)),
                                 }
                             }
                         }
-
                         if ui.button("Export .reg for Windows").on_hover_text("Export Windows registry file to register context menu on Windows").clicked() {
                             if let Some(path) = rfd::FileDialog::new()
                                 .add_filter("Registry Script (*.reg)", &["reg"])

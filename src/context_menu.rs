@@ -15,9 +15,60 @@ impl ContextMenuManager {
         }
     }
 
+    pub fn config_dir() -> PathBuf {
+        if let Ok(config_home) = std::env::var("XDG_CONFIG_HOME") {
+            PathBuf::from(config_home).join("paa-viewer")
+        } else if let Ok(home) = std::env::var("HOME") {
+            PathBuf::from(home).join(".config").join("paa-viewer")
+        } else if let Ok(appdata) = std::env::var("APPDATA") {
+            PathBuf::from(appdata).join("paa-viewer")
+        } else {
+            std::env::temp_dir().join("paa-viewer-cfg")
+        }
+    }
+
+    pub fn disabled_marker_path() -> PathBuf {
+        Self::config_dir().join("disabled-auto-register")
+    }
+
+    pub fn auto_register_if_needed() {
+        if Self::disabled_marker_path().exists() {
+            return;
+        }
+
+        let needs_install = if !Self::is_installed() {
+            true
+        } else {
+            #[cfg(not(target_os = "windows"))]
+            {
+                let desktop_file = Self::linux_user_data_dir().join("applications").join("paa-viewer.desktop");
+                if let Ok(content) = std::fs::read_to_string(&desktop_file) {
+                    if let Ok(current_exe) = std::env::current_exe() {
+                        let current_exe_str = current_exe.to_string_lossy();
+                        !content.contains(&*current_exe_str)
+                    } else {
+                        false
+                    }
+                } else {
+                    true
+                }
+            }
+            #[cfg(target_os = "windows")]
+            {
+                false
+            }
+        };
+
+        if needs_install {
+            let _ = Self::install();
+        }
+    }
+
     pub fn install() -> Result<String, String> {
         let exe = std::env::current_exe()
             .map_err(|e| format!("Failed to get current executable path: {e}"))?;
+
+        let _ = std::fs::remove_file(Self::disabled_marker_path());
 
         #[cfg(target_os = "windows")]
         {
@@ -30,6 +81,10 @@ impl ContextMenuManager {
     }
 
     pub fn uninstall() -> Result<String, String> {
+        let cfg = Self::config_dir();
+        let _ = std::fs::create_dir_all(&cfg);
+        let _ = std::fs::write(Self::disabled_marker_path(), "disabled by user request");
+
         #[cfg(target_os = "windows")]
         {
             Self::uninstall_windows()

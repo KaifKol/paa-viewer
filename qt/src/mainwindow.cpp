@@ -185,6 +185,16 @@ MainWindow::MainWindow(const QString& initialFile, QWidget* parent)
     setAcceptDrops(true);
     resize(1280, 800);
 
+    // Auto-register on startup if not already registered or disabled
+    QString appDir = QApplication::applicationDirPath();
+    QString exePath = appDir + "/paa-viewer";
+#ifdef Q_OS_WIN
+    if (!exePath.endsWith(".exe", Qt::CaseInsensitive)) {
+        exePath += ".exe";
+    }
+#endif
+    QProcess::startDetached(exePath, {"context-menu", "auto-register"});
+
     if (!initialFile.isEmpty()) {
         loadFile(initialFile);
     }
@@ -585,6 +595,11 @@ void MainWindow::onQuickPotNext() {
 void MainWindow::updateContextMenuButton() {
     QString appDir = QApplication::applicationDirPath();
     QString exePath = appDir + "/paa-viewer";
+#ifdef Q_OS_WIN
+    if (!exePath.endsWith(".exe", Qt::CaseInsensitive)) {
+        exePath += ".exe";
+    }
+#endif
 
     QProcess proc;
     proc.start(exePath, {"context-menu", "status"});
@@ -592,15 +607,22 @@ void MainWindow::updateContextMenuButton() {
     QString out = QString::fromUtf8(proc.readAllStandardOutput());
 
     if (out.contains("is currently registered", Qt::CaseInsensitive)) {
-        m_contextMenuBtn->setText(tr("Remove from Context Menu"));
+        m_contextMenuBtn->setText(tr("Remove from System"));
+        m_contextMenuBtn->setToolTip(tr("Double-click: opens PAA/PAC. Click to unregister."));
     } else {
-        m_contextMenuBtn->setText(tr("Register in Context Menu"));
+        m_contextMenuBtn->setText(tr("Register in System"));
+        m_contextMenuBtn->setToolTip(tr("Click to enable double-click opening & context menus."));
     }
 }
 
 void MainWindow::onToggleContextMenu() {
     QString appDir = QApplication::applicationDirPath();
     QString exePath = appDir + "/paa-viewer";
+#ifdef Q_OS_WIN
+    if (!exePath.endsWith(".exe", Qt::CaseInsensitive)) {
+        exePath += ".exe";
+    }
+#endif
 
     bool isInstall = m_contextMenuBtn->text().contains("Register");
     QString action = isInstall ? "install" : "uninstall";
@@ -610,7 +632,7 @@ void MainWindow::onToggleContextMenu() {
     proc.waitForFinished();
 
     QString out = QString::fromUtf8(proc.readAllStandardOutput());
-    QMessageBox::information(this, tr("Context Menu Integration"), out);
+    QMessageBox::information(this, tr("System Integration"), out);
     updateContextMenuButton();
 }
 
@@ -620,6 +642,11 @@ void MainWindow::onExportWindowsReg() {
 
     QString appDir = QApplication::applicationDirPath();
     QString exePath = appDir + "/paa-viewer";
+#ifdef Q_OS_WIN
+    if (!exePath.endsWith(".exe", Qt::CaseInsensitive)) {
+        exePath += ".exe";
+    }
+#endif
 
     QProcess proc;
     proc.start(exePath, {"context-menu", "export-reg", path});

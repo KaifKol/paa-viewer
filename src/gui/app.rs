@@ -22,7 +22,7 @@ pub struct PaaViewerApp {
     pub current_mip_level: usize,
     pub current_image: Option<DynamicImage>,
     pub texture: Option<egui::TextureHandle>,
-
+    pub initial_file_to_load: Option<PathBuf>,
     // Viewport
     pub zoom: f32,
     pub pan: Vec2,
@@ -44,7 +44,10 @@ pub struct PaaViewerApp {
 
 impl PaaViewerApp {
     pub fn new(_cc: &eframe::CreationContext<'_>, initial_file: Option<PathBuf>) -> Self {
-        let mut app = Self {
+        crate::context_menu::ContextMenuManager::auto_register_if_needed();
+
+        Self {
+            initial_file_to_load: initial_file.map(clean_path),
             file_path: None,
             paa_image: None,
             metadata: None,
@@ -63,23 +66,16 @@ impl PaaViewerApp {
             status_message: None,
             export_pax_type: PaXType::DXT5,
             export_generate_mipmaps: true,
-        };
-
-        crate::context_menu::ContextMenuManager::auto_register_if_needed();
-
-        if let Some(path) = initial_file {
-            app.load_file(path, &_cc.egui_ctx);
         }
-        app
     }
 
-    pub fn load_file(&mut self, path: PathBuf, ctx: &egui::Context) {
+    pub fn load_file(&mut self, raw_path: PathBuf, ctx: &egui::Context) {
+        let path = clean_path(raw_path);
         let ext = path
             .extension()
             .and_then(|e| e.to_str())
             .map(|s| s.to_ascii_lowercase())
             .unwrap_or_default();
-
         if ext == "paa" || ext == "pac" {
             match std::fs::File::open(&path) {
                 Ok(file) => {
@@ -89,33 +85,50 @@ impl PaaViewerApp {
                             match paa.to_dynamic_image(0) {
                                 Ok(img) => {
                                     self.metadata = Some(paa.metadata());
-                                    self.file_path = Some(path);
+                                    self.file_path = Some(path.clone());
                                     self.current_mip_level = 0;
                                     self.current_image = Some(img);
                                     self.paa_image = Some(paa);
                                     self.fit_to_window = true;
                                     self.pan = Vec2::ZERO;
                                     self.update_texture(ctx);
-                                    self.status_message = Some(("Loaded PAA file successfully".to_string(), false));
+                                    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("image");
+                                    ctx.send_viewport_cmd(egui::ViewportCommand::Title(format!("PAA Viewer - {file_name}")));
+                                    self.status_message = Some((format!("Loaded: {file_name}"), false));
                                 }
                                 Err(e) => {
+                                    self.file_path = None;
+                                    self.current_image = None;
+                                    self.texture = None;
+                                    self.paa_image = None;
+                                    self.metadata = None;
                                     self.status_message = Some((format!("Failed to decode PAA mipmap 0: {e}"), true));
                                 }
                             }
                         }
                         Err(e) => {
+                            self.file_path = None;
+                            self.current_image = None;
+                            self.texture = None;
+                            self.paa_image = None;
+                            self.metadata = None;
                             self.status_message = Some((format!("Failed to read PAA: {e}"), true));
                         }
                     }
                 }
                 Err(e) => {
+                    self.file_path = None;
+                    self.current_image = None;
+                    self.texture = None;
+                    self.paa_image = None;
+                    self.metadata = None;
                     self.status_message = Some((format!("Failed to open file: {e}"), true));
                 }
             }
         } else {
             match image::open(&path) {
                 Ok(img) => {
-                    self.file_path = Some(path);
+                    self.file_path = Some(path.clone());
                     self.paa_image = None;
                     self.metadata = None;
                     self.current_mip_level = 0;
@@ -123,9 +136,16 @@ impl PaaViewerApp {
                     self.fit_to_window = true;
                     self.pan = Vec2::ZERO;
                     self.update_texture(ctx);
-                    self.status_message = Some(("Loaded image successfully".to_string(), false));
+                    let file_name = path.file_name().and_then(|s| s.to_str()).unwrap_or("image");
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Title(format!("PAA Viewer - {file_name}")));
+                    self.status_message = Some((format!("Loaded: {file_name}"), false));
                 }
                 Err(e) => {
+                    self.file_path = None;
+                    self.current_image = None;
+                    self.texture = None;
+                    self.paa_image = None;
+                    self.metadata = None;
                     self.status_message = Some((format!("Failed to load image: {e}"), true));
                 }
             }
@@ -262,14 +282,18 @@ impl PaaViewerApp {
 
 impl eframe::App for PaaViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Load initial file on first frame
+        if let Some(path) = self.initial_file_to_load.take() {
+            self.load_file(path, ctx);
+        }
+
         // Handle Drag & Drop of files
         let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
         if let Some(file) = dropped_files.first() {
             if let Some(path) = &file.path {
-                self.load_file(path.clone(), ctx);
+                self.load_file(clean_path(path.clone()), ctx);
             }
         }
-
         // Top Control Panel
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
@@ -794,4 +818,32 @@ fn draw_checkerboard(painter: &egui::Painter, rect: Rect, viewport: Rect) {
             }
         }
     }
+}
+
+pub fn clean_path(path: PathBuf) -> PathBuf {
+    let s = path.to_string_lossy();
+    let unescaped = if let Some(stripped) = s.strip_prefix("file://") {
+        percent_decode(stripped)
+    } else {
+        s.to_string()
+    };
+    PathBuf::from(unescaped)
+}
+
+fn percent_decode(s: &str) -> String {
+    let mut out = Vec::new();
+    let bytes = s.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' && i + 2 < bytes.len() {
+            if let Ok(val) = u8::from_str_radix(std::str::from_utf8(&bytes[i + 1..i + 3]).unwrap_or(""), 16) {
+                out.push(val);
+                i += 3;
+                continue;
+            }
+        }
+        out.push(bytes[i]);
+        i += 1;
+    }
+    String::from_utf8_lossy(&out).to_string()
 }

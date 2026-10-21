@@ -12,12 +12,6 @@ cd "${ROOT_DIR}"
 echo "Compiling Rust release artifacts..."
 cargo build --release
 
-# 2. Compile Qt frontend if available
-if command -v cmake >/dev/null 2>&1; then
-    echo "Compiling Qt6 frontend..."
-    cmake -B qt/build -S qt
-    cmake --build qt/build --target paa-viewer-qt
-fi
 
 # 3. Create staging directory
 STAGE_DIR=$(mktemp -d /tmp/paa-deb-build.XXXXXX)
@@ -43,15 +37,6 @@ chmod 0755 "${STAGE_DIR}/DEBIAN/postrm"
 cp target/release/paa-viewer "${STAGE_DIR}/usr/bin/"
 chmod 0755 "${STAGE_DIR}/usr/bin/paa-viewer"
 
-if [ -f qt/build/paa-viewer-qt ]; then
-    cp qt/build/paa-viewer-qt "${STAGE_DIR}/usr/bin/"
-    chmod 0755 "${STAGE_DIR}/usr/bin/paa-viewer-qt"
-fi
-
-if [ -f target/release/libpaa_viewer.so ]; then
-    cp target/release/libpaa_viewer.so "${STAGE_DIR}/usr/lib/"
-    chmod 0755 "${STAGE_DIR}/usr/lib/libpaa_viewer.so"
-fi
 
 # Copy desktop, mime, and icons
 cp packaging/paa-viewer.desktop "${STAGE_DIR}/usr/share/applications/"

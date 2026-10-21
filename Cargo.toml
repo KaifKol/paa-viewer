@@ -4,7 +4,7 @@ version = "0.1.1"
 edition = "2024"
 [lib]
 name = "paa_viewer"
-crate-type = ["rlib", "cdylib", "staticlib"]
+crate-type = ["rlib"]
 
 
 [dependencies]

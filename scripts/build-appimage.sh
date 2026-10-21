@@ -11,12 +11,6 @@ cd "${ROOT_DIR}"
 # 1. Compile Rust release binary & library
 cargo build --release
 
-# 2. Compile Qt frontend if cmake available
-if command -v cmake >/dev/null 2>&1; then
-    cmake -B qt/build -S qt
-    cmake --build qt/build --target paa-viewer-qt || true
-fi
-
 # 3. Create AppDir structure
 APPDIR="${ROOT_DIR}/dist/AppDir"
 rm -rf "${APPDIR}"
@@ -43,15 +37,6 @@ cp packaging/paa-viewer.xml "${APPDIR}/usr/share/mime/packages/"
 cp target/release/paa-viewer "${APPDIR}/usr/bin/"
 chmod 0755 "${APPDIR}/usr/bin/paa-viewer"
 
-if [ -f qt/build/paa-viewer-qt ]; then
-    cp qt/build/paa-viewer-qt "${APPDIR}/usr/bin/"
-    chmod 0755 "${APPDIR}/usr/bin/paa-viewer-qt"
-fi
-
-if [ -f target/release/libpaa_viewer.so ]; then
-    cp target/release/libpaa_viewer.so "${APPDIR}/usr/lib/"
-    chmod 0755 "${APPDIR}/usr/lib/libpaa_viewer.so"
-fi
 
 mkdir -p "${ROOT_DIR}/dist"
 OUTPUT_APPIMAGE="${ROOT_DIR}/dist/PAA_Viewer-x86_64.AppImage"

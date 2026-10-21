@@ -1,7 +1,6 @@
 pub mod cli;
 pub mod context_menu;
 pub mod convert;
-pub mod ffi;
 pub mod gui;
 pub mod paa;
 pub mod resize;

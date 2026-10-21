@@ -1,13 +1,11 @@
 # PAA Viewer & Converter
 
-Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Bohemia Interactive PAA files (Arma 3, DayZ, Real Virtuality engine), written in Rust with optional native Qt 6 interface for Linux desktop environments.
+Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Bohemia Interactive PAA files (Arma 3, DayZ, Real Virtuality engine), written in 100% pure Rust.
 
 ## Features
 
-- **Dual Graphical Interfaces**:
-  - **Standalone egui / eframe GUI**: Ultra-fast GPU-accelerated viewer with zero external desktop dependencies. Perfect for portable standalone use on Linux and Windows.
-  - **Native Qt 6 GUI (`paa-viewer-qt`)**: Polished Qt 6 desktop application seamlessly adapting to native Linux system colors and theme (KDE Breeze, GNOME/GTK, dark/light mode), dockable inspector panels, smooth graphics view, and deep desktop integration.
-  - Interactive Mipmap Navigator: inspect all mip levels with dimensions, compressed vs uncompressed sizes, compression ratio, and switch view to any level instantly.
+- **GPU-Accelerated Native GUI**:
+  - Ultra-fast cross-platform viewer with zero external desktop dependencies. Perfect for standalone use on Linux and Windows.
   - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale.
   - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch.
   - Drag & Drop: drag any `.paa`, `.png`, `.jpg`, `.tga`, `.bmp`, or `.webp` into the window to load immediately.
@@ -57,12 +55,8 @@ Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Boh
 Requires Rust 1.85+ (Edition 2024):
 
 ```bash
-# Build Rust core binary and libraries
+# Build pure Rust binary and libraries
 cargo build --release
-
-# Build native Qt6 interface (optional, for Linux)
-cmake -B qt/build -S qt
-cmake --build qt/build
 ```
 
 ---
@@ -118,14 +112,16 @@ paa-viewer
 # Launch GUI and open texture
 paa-viewer texture.paa
 
-# Launch native Qt 6 GUI (Linux)
-./qt/build/paa-viewer-qt texture.paa
+
 ```
 
 ### System Context Menu Management
 
 ```bash
-# Register in system context menu and file associations (Linux or Windows)
+# Register in system as default for double-click and context menus
+paa-viewer install
+
+# Or via submenu:
 paa-viewer context-menu install
 
 # Check registration status
@@ -177,19 +173,15 @@ paa-viewer batch ./input_paa --out-dir ./output_png --to png
 
 ```
 paa-viewer/
-├── Cargo.toml            # Rust manifest (binary + rlib/cdylib/staticlib)
+├── Cargo.toml            # Rust manifest (binary + library)
 ├── src/
 │   ├── main.rs           # CLI entry point and dispatch
 │   ├── lib.rs            # Public Rust library API
-│   ├── ffi.rs            # C-FFI exports for Qt and external bindings
 │   ├── context_menu.rs   # Linux & Windows context menu registration
 │   ├── convert.rs        # Format conversion and batch processing
 │   ├── resize.rs         # Power-of-two math and resampling
 │   ├── gui/              # egui cross-platform desktop interface
 │   └── paa/              # Core PAA codec (LZO, LZ77, Mipmaps, Tags, Pax)
-├── qt/                   # Native Linux Qt 6 GUI interface (C++ & CMake)
-│   ├── CMakeLists.txt
-│   └── src/              # MainWindow, TextureCanvas, FFI bridge
 ├── packaging/
 │   ├── paa-viewer.desktop
 │   ├── paa-viewer.xml    # FreeDesktop MIME type image/x-paa

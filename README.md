@@ -77,11 +77,11 @@ Creates a complete `.deb` package containing both binaries, icons, desktop file,
 ```bash
 ./scripts/build-deb.sh
 ```
-Output: `dist/paa-viewer_0.1.0_amd64.deb`
+Output: `dist/paa-viewer_0.1.1_amd64.deb`
 
 Install on Debian/Ubuntu/Mint:
 ```bash
-sudo dpkg -i dist/paa-viewer_0.1.0_amd64.deb
+sudo dpkg -i dist/paa-viewer_0.1.1_amd64.deb
 ```
 
 ### 2. Linux AppImage (`.AppImage`)

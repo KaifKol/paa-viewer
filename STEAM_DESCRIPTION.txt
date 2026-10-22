@@ -1,0 +1,34 @@
+SHORT DESCRIPTION
+
+View, inspect, resize, and convert PAA textures used by Arma 3, DayZ, and other Bohemia Interactive games.
+
+ABOUT THIS SOFTWARE
+
+PAA Viewer is a desktop tool for working with Bohemia Interactive texture files. Open a PAA without starting the game, inspect its channels and mipmaps, then export it to a common image format or back to PAA.
+
+[h2]Inspect textures[/h2]
+
+[list]
+[*]Open PAA, PAC, PNG, JPEG, TGA, BMP, and WebP files
+[*]View RGB, alpha, or individual color channels
+[*]Inspect pixel coordinates, RGBA values, PAA metadata, tags, and mipmap levels
+[*]Zoom, pan, fit the image to the window, and switch filtering modes
+[/list]
+
+[h2]Convert and resize[/h2]
+
+[list]
+[*]Convert between PAA and common image formats
+[*]Export PAA as DXT1, DXT3, DXT5, ARGB8888, ARGB1555, ARGB4444, or GRAYA
+[*]Generate mipmaps automatically
+[*]Scale textures or align their dimensions to a power of two
+[*]Choose Lanczos, bilinear, or nearest-neighbor resampling
+[/list]
+
+[h2]Use it your way[/h2]
+
+Use the desktop interface for individual textures or the command line for batch conversion. Optional file associations and right-click actions integrate PAA Viewer with Windows Explorer and Linux file managers.
+
+PAA Viewer runs locally and does not require the game to be running.
+
+PAA Viewer is an independent project and is not affiliated with or endorsed by Bohemia Interactive.

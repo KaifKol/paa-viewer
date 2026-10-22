@@ -1,208 +1,183 @@
-# PAA Viewer & Converter
+# PAA Viewer
 
-Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Bohemia Interactive PAA files (Arma 3, DayZ, Real Virtuality engine), written in 100% pure Rust.
+A desktop viewer and converter for PAA textures used by Arma 3, DayZ, and
+other Bohemia Interactive games.
+
+Use it to inspect a texture without starting the game, convert common image
+formats to PAA, or prepare power-of-two textures for a mod.
+
+## Download
+
+Prebuilt packages are available on the
+[Releases page](https://github.com/KaifKol/paa-viewer/releases/latest).
+
+| Platform | Package |
+| --- | --- |
+| Windows x64 | `paa-viewer-windows-x64.zip` |
+| Debian, Ubuntu, Linux Mint | `.deb` |
+| Other x64 Linux distributions | `.AppImage` or portable `.tar.gz` |
+
+On Windows, extract the archive and run `paa-viewer.exe`.
+
+On Linux, make the AppImage executable before starting it:
+
+```bash
+chmod +x PAA_Viewer-x86_64.AppImage
+./PAA_Viewer-x86_64.AppImage
+```
 
 ## Features
 
-- **GPU-Accelerated Native GUI**:
-  - Ultra-fast cross-platform viewer with zero external desktop dependencies. Perfect for standalone use on Linux and Windows.
-  - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale.
-  - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch.
-  - Drag & Drop: drag any `.paa`, `.png`, `.jpg`, `.tga`, `.bmp`, or `.webp` into the window to load immediately.
-  - Single-instance activation: opening another file switches the running window and brings it forward.
+- Open `.paa`, `.pac`, `.png`, `.jpg`, `.jpeg`, `.tga`, `.bmp`, and `.webp`
+- Inspect PAA metadata, tags, mipmap levels, and pixel RGBA values
+- View RGB, alpha, or individual color channels
+- Zoom, pan, fit to window, and switch between nearest and linear filtering
+- Export images to PAA or a common image format
+- Generate PAA mipmaps automatically
+- Resize by a scale factor or align each dimension to a power of two
+- Convert one file or a directory from the command line
+- Add file associations and conversion actions to Windows Explorer or Linux
+  file managers
 
-- **System Context Menu & File Association Integration**:
-  - **Linux Integration**:
-    - FreeDesktop `.desktop` file registration
-    - MIME type definition for `image/x-paa` (`*.paa`, `*.pac`)
-    - Dolphin / KDE service menu actions (`~/.local/share/kio/servicemenus/paa-actions.desktop`)
-    - Context menu actions: "Open with PAA Viewer", "Convert to PNG", "Convert to PAA (DXT5 POT)"
-    - In-GUI toggle button or CLI: `paa-viewer context-menu install` / `uninstall`
-  - **Windows Explorer Integration**:
-    - Right-click context menu options for `.paa` files ("Open with PAA Viewer", "Convert to PNG")
-    - Right-click context menu options for `.png`, `.jpg`, `.tga` files ("Convert to PAA (DXT5 POT)")
-    - Instant registration via CLI, GUI button, or pre-generated `paa-viewer-context-menu.reg`
+## Using the desktop app
 
-- **Full PAA Format Codec**:
-  - Formats supported: DXT1, DXT2, DXT3, DXT4, DXT5, ARGB8888, ARGB1555, ARGB4444, GRAYA
-  - LZO1X-1 / LZSS compression and safe decompression for DXT mipmaps
-  - Bohemia LZ77 compression and decompression for ARGB mipmaps
-  - Complete `GGAT` tagged sections parser and writer:
-    - `AVGC` / `CGVA`: Average color RGBA
-    - `MAXC` / `CXAM`: Max color RGBA
-    - `FLAG` / `GALF`: Alpha transparency flag
-    - `OFFS` / `SFFO`: Mipmap offset table (16 entries)
-    - Custom tags (e.g. `SWAV`)
-  - Automatic mipmap generation down to 4x4 (for DXT) or 1x1
-
-- **Power of Two (POT) Resizer**:
-  - Scaling factors: halve resolution (0.5x), double (2x), quadruple (4x), or custom factor
-  - Power of Two alignment:
-    - `pot-nearest`: round each dimension to the closest power of 2 ($2^n$, e.g. 500x300 -> 512x256)
-    - `pot-next`: round up each dimension to the next power of 2 ($2^n$, e.g. 500x300 -> 512x512)
-    - `pot-prev`: round down each dimension to the previous power of 2 ($2^n$, e.g. 500x300 -> 256x256)
-    - `stretch:WIDTHxHEIGHT`: stretch to exact dimensions (e.g. 1024x1024)
-    - `fit:WIDTHxHEIGHT`: scale keeping original aspect ratio and pad remaining space
-  - Resampling filters: Lanczos3 (high quality), Triangle (Bilinear), Nearest Neighbor
-
-- **Bidirectional Local Converter & Batch Processing**:
-  - Convert PAA <-> PNG, JPG, TGA, BMP, WebP
-  - Single file and directory batch conversion via CLI or GUI
-
----
-
-## Build & Installation
-
-Requires Rust 1.85+ (Edition 2024):
+Run the program without arguments:
 
 ```bash
-# Build pure Rust binary and libraries
-cargo build --release
-```
-
----
-
-## Packaging
-
-The project includes production-ready automated packaging scripts:
-
-### 1. Debian Package (`.deb`)
-Creates a complete `.deb` package containing both binaries, icons, desktop file, MIME database entry, and post-installation hooks:
-
-```bash
-./scripts/build-deb.sh
-```
-Output: `dist/paa-viewer_0.1.2_amd64.deb`
-
-Install on Debian/Ubuntu/Mint:
-```bash
-sudo dpkg -i dist/paa-viewer_0.1.2_amd64.deb
-```
-
-### 2. Linux AppImage (`.AppImage`)
-Creates a standalone, portable AppImage bundle that runs on any modern Linux distribution without installing dependencies:
-
-```bash
-./scripts/build-appimage.sh
-```
-Output: `dist/PAA_Viewer-x86_64.AppImage`
-
-Run directly:
-```bash
-./dist/PAA_Viewer-x86_64.AppImage
-```
-
-### 3. Windows Executable & Bundle (`.exe` & `.zip`)
-Cross-compiles for Windows x86_64 and packages the executable, icon, and context menu registry installer:
-
-```bash
-./scripts/build-windows.sh
-```
-Output: `dist/paa-viewer-windows-x64.zip`
-
----
-
-## CLI Usage
-
-### Launch Graphical Interface
-
-```bash
-# Launch default GUI (egui)
 paa-viewer
+```
 
-# Launch GUI and open texture
+You can also open a file directly:
+
+```bash
 paa-viewer texture.paa
-
-
 ```
 
-### System Context Menu Management
+Drop a file into the window or use **Open File**. The right panel shows PAA
+metadata and mipmap levels. Scroll over the image to zoom and drag to pan.
+Choose the output format and mipmap settings under **PAA Export Settings**,
+then use **Export As**.
+
+## Command line
+
+### Inspect a PAA file
 
 ```bash
-# Register in system as default for double-click and context menus
-paa-viewer install
-
-# Or via submenu:
-paa-viewer context-menu install
-
-# Check registration status
-paa-viewer context-menu status
-
-# Unregister from context menu
-paa-viewer context-menu uninstall
-
-# Export Windows .reg file for manual installation
-paa-viewer context-menu export-reg paa-context-menu.reg
-```
-
-### Inspect PAA Metadata (`info`)
-
-```bash
-# Human-readable table in terminal
 paa-viewer info texture.paa
-
-# JSON output for modding tools and automation
 paa-viewer info texture.paa --json
 ```
 
-### Convert Images (`convert`)
+### Convert files
+
+If the output path is omitted, PAA and PAC files are converted to PNG. Other
+images are converted to PAA.
 
 ```bash
-# Convert PNG to PAA (DXT5) with power-of-two alignment
-paa-viewer convert input.png output.paa --format dxt5 --resize pot-nearest
-
-# Convert PAA to PNG (output path auto-derived if omitted)
+# PAA to PNG
 paa-viewer convert texture.paa
 
-# Scale texture by 50% (half resolution)
-paa-viewer convert texture.paa scaled.paa --resize 0.5
+# PNG to DXT5 PAA
+paa-viewer convert source.png texture.paa --format dxt5
+
+# Convert and round each dimension to the nearest power of two
+paa-viewer convert source.png texture.paa --format dxt5 --resize pot-nearest
+
+# Resize to an exact size
+paa-viewer convert source.png texture.paa --resize 1024x1024
+
+# Fit inside a size while preserving aspect ratio and pad the remaining area
+paa-viewer convert source.png texture.paa --resize fit:1024x1024
 ```
 
-### Batch Conversion (`batch`)
+Available resize modes:
+
+| Value | Result |
+| --- | --- |
+| `0.5`, `2.0` | Scale by a factor |
+| `pot-nearest` | Round each dimension to the nearest power of two |
+| `pot-next` | Round each dimension up |
+| `pot-prev` | Round each dimension down |
+| `WIDTHxHEIGHT` | Stretch to an exact size |
+| `fit:WIDTHxHEIGHT` | Preserve aspect ratio and pad to the requested size |
+
+Use `--filter lanczos`, `--filter triangle`, or `--filter nearest` to select
+the resampling filter.
+
+### Convert a directory
 
 ```bash
-# Batch convert directory of PNGs to PAA
-paa-viewer batch ./input_png --out-dir ./output_paa --to paa --format dxt5 --resize pot-nearest
+# PNG and other supported images to PAA
+paa-viewer batch ./source --out-dir ./paa --to paa \
+  --format dxt5 --resize pot-nearest
 
-# Batch convert PAAs to PNG
-paa-viewer batch ./input_paa --out-dir ./output_png --to png
+# PAA files to PNG, including subdirectories
+paa-viewer batch ./paa --out-dir ./png --to png --recursive
 ```
 
----
+Run `paa-viewer --help` or `paa-viewer <command> --help` for the complete
+option list.
 
-## Project Structure
+## Supported formats
 
+| Format | Read | Write |
+| --- | :---: | :---: |
+| PAA/PAC DXT1 | Yes | Yes |
+| PAA/PAC DXT3 | Yes | Yes |
+| PAA/PAC DXT5 | Yes | Yes |
+| PAA/PAC ARGB8888 | Yes | Yes |
+| PAA/PAC ARGB1555 | Yes | Yes |
+| PAA/PAC ARGB4444 | Yes | Yes |
+| PAA/PAC GRAYA | Yes | Yes |
+| PNG, JPEG, TGA, BMP, WebP | Yes | Yes |
+
+PAA files may contain LZO-compressed DXT mipmaps or LZ77-compressed ARGB
+mipmaps. The viewer reads and writes both forms.
+
+## File associations and context menus
+
+The app can register itself as the handler for `.paa` and `.pac` files. It
+also adds right-click actions for opening PAA files and converting between PAA
+and common image formats.
+
+Use the **System Integration** section in the app, or run:
+
+```bash
+paa-viewer install
+paa-viewer context-menu status
+paa-viewer uninstall
 ```
-paa-viewer/
-├── Cargo.toml            # Rust manifest (binary + library)
-├── src/
-│   ├── main.rs           # CLI entry point and dispatch
-│   ├── lib.rs            # Public Rust library API
-│   ├── context_menu.rs   # Linux & Windows context menu registration
-│   ├── convert.rs        # Format conversion and batch processing
-│   ├── resize.rs         # Power-of-two math and resampling
-│   ├── gui/              # egui cross-platform desktop interface
-│   └── paa/              # Core PAA codec (LZO, LZ77, Mipmaps, Tags, Pax)
-├── packaging/
-│   ├── paa-viewer.desktop
-│   ├── paa-viewer.xml    # FreeDesktop MIME type image/x-paa
-│   ├── paa-viewer.svg    # Vector application icon
-│   ├── paa-viewer.png    # 256x256 raster icon
-│   ├── deb/              # Debian package control files
-│   ├── appimage/         # AppRun launcher script
-│   └── windows/          # Registry script & .ico icon
-├── scripts/
-│   ├── build-deb.sh      # Debian packaging script
-│   ├── build-appimage.sh # AppImage packaging script
-│   └── build-windows.sh  # Windows cross-compilation & packaging script
-├── tests/
-│   └── paa_tests.rs      # Comprehensive codec and pipeline tests
-└── .github/workflows/
-    └── release.yml       # Automated GitHub Actions release pipeline
+
+Registration is per user on Linux. Windows registration is written to the
+current user's registry.
+
+## Build from source
+
+Rust 1.85 or newer is required.
+
+```bash
+git clone https://github.com/KaifKol/paa-viewer.git
+cd paa-viewer
+cargo build --release
 ```
 
----
+The binary is written to `target/release/paa-viewer`.
+
+Linux builds require the OpenGL and X11 development packages used by `eframe`.
+On Debian and Ubuntu:
+
+```bash
+sudo apt install libgl1-mesa-dev libx11-dev libxcursor-dev \
+  libxrandr-dev libxi-dev libxinerama-dev
+```
+
+To build distribution packages:
+
+```bash
+./scripts/build-deb.sh
+./scripts/build-appimage.sh
+./scripts/build-windows.sh
+```
 
 ## License
 
-GPL-2.0 / MIT
+[MIT](LICENSE)

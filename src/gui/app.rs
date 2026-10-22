@@ -43,7 +43,8 @@ pub struct PaaViewerApp {
 }
 
 impl PaaViewerApp {
-    pub fn new(_cc: &eframe::CreationContext<'_>, initial_file: Option<PathBuf>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, initial_file: Option<PathBuf>) -> Self {
+        crate::single_instance::set_repaint_context(cc.egui_ctx.clone());
         crate::context_menu::ContextMenuManager::auto_register_if_needed();
 
         Self {
@@ -282,9 +283,11 @@ impl PaaViewerApp {
 
 impl eframe::App for PaaViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Check for files forwarded from another instance (e.g. double click in file manager)
-        if let Some(path) = crate::single_instance::check_incoming_file() {
-            self.load_file(clean_path(path), ctx);
+        // Check for requests forwarded from another instance.
+        if let Some(message) = crate::single_instance::check_incoming_message() {
+            if let crate::single_instance::IpcMessage::Open(path) = message {
+                self.load_file(clean_path(path), ctx);
+            }
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
             ctx.request_repaint();
         }
@@ -830,7 +833,10 @@ pub fn clean_path(path: PathBuf) -> PathBuf {
     let raw = path.to_string_lossy();
     let mut s = raw.trim();
 
-    if (s.starts_with('"') && s.ends_with('"')) || (s.starts_with('\'') && s.ends_with('\'')) {
+    if s.len() >= 2
+        && ((s.starts_with('"') && s.ends_with('"'))
+            || (s.starts_with('\'') && s.ends_with('\'')))
+    {
         s = &s[1..s.len() - 1];
     }
     s = s.trim();

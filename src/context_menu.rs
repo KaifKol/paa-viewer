@@ -295,7 +295,7 @@ Name=Convert to PAA (DXT5 POT)
 Icon=image-x-generic
 Exec="{exe_str}" convert %f --format dxt5 --resize pot-nearest --notify
 
-[Desktop Action ConvertToPaaDxt1]
+[Desktop Action ConvertPaaDxt1]
 Name=Convert to PAA (DXT1 POT)
 Icon=image-x-generic
 Exec="{exe_str}" convert %f --format dxt1 --resize pot-nearest --notify
@@ -332,9 +332,9 @@ done <<< "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"
             r#"[Nemo Action]
 Name=Convert to PNG
 Comment=Convert PAA texture to PNG image via PAA Viewer
-Exec="{exe_str}" convert "%F" --notify
+Exec="{exe_str}" convert %f --notify
 Icon-Name=image-png
-Selection=notnone
+Selection=s
 Extensions=paa;pac;
 Quote=double
 "#
@@ -345,9 +345,9 @@ Quote=double
             r#"[Nemo Action]
 Name=Convert to PAA (DXT5 POT)
 Comment=Convert image to PAA DXT5 with POT resizing
-Exec="{exe_str}" convert "%F" --format dxt5 --resize pot-nearest --notify
+Exec="{exe_str}" convert %f --format dxt5 --resize pot-nearest --notify
 Icon-Name=image-x-generic
-Selection=notnone
+Selection=s
 Extensions=png;jpg;jpeg;tga;bmp;webp;
 Quote=double
 "#

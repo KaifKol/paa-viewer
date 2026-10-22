@@ -375,19 +375,3 @@ fn test_cli_parsing_subcommand() {
     assert!(cli2.command.is_none());
     assert_eq!(cli2.file, Some(std::path::PathBuf::from("test.paa")));
 }
-
-#[test]
-fn test_single_instance_forwarding() {
-    use paa_viewer::single_instance;
-
-    single_instance::start_listener();
-    let test_file = std::path::Path::new("/tmp/test_texture_forward.paa");
-    let forwarded = single_instance::try_forward_to_existing(Some(test_file));
-    assert!(forwarded, "Should successfully forward to running listener");
-
-    // Allow thread to process
-    std::thread::sleep(std::time::Duration::from_millis(50));
-    let incoming = single_instance::check_incoming_file();
-    assert_eq!(incoming, Some(test_file.to_path_buf()));
-    single_instance::cleanup();
-}

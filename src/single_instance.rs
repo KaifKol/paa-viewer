@@ -3,10 +3,19 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::LazyLock;
 
-static IPC_CHANNEL: LazyLock<(Sender<PathBuf>, std::sync::Mutex<Receiver<PathBuf>>)> = LazyLock::new(|| {
-    let (tx, rx) = channel();
-    (tx, std::sync::Mutex::new(rx))
-});
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IpcMessage {
+    Activate,
+    Open(PathBuf),
+}
+
+static IPC_CHANNEL: LazyLock<(Sender<IpcMessage>, std::sync::Mutex<Receiver<IpcMessage>>)> =
+    LazyLock::new(|| {
+        let (tx, rx) = channel();
+        (tx, std::sync::Mutex::new(rx))
+    });
+static REPAINT_CONTEXT: LazyLock<std::sync::Mutex<Option<eframe::egui::Context>>> =
+    LazyLock::new(|| std::sync::Mutex::new(None));
 
 #[cfg(unix)]
 fn socket_path() -> PathBuf {
@@ -15,6 +24,22 @@ fn socket_path() -> PathBuf {
     } else {
         let user = std::env::var("USER").unwrap_or_else(|_| "user".to_string());
         std::env::temp_dir().join(format!("paa-viewer-{user}.sock"))
+    }
+}
+
+pub fn set_repaint_context(context: eframe::egui::Context) {
+    if let Ok(mut repaint_context) = REPAINT_CONTEXT.lock() {
+        *repaint_context = Some(context);
+    }
+}
+
+fn wake_gui() {
+    let context = REPAINT_CONTEXT
+        .lock()
+        .ok()
+        .and_then(|repaint_context| repaint_context.clone());
+    if let Some(context) = context {
+        context.request_repaint();
     }
 }
 
@@ -57,9 +82,16 @@ pub fn start_listener() {
                     let mut reader = BufReader::new(stream);
                     let mut line = String::new();
                     if reader.read_line(&mut line).is_ok() {
-                        let trimmed = line.trim();
-                        if !trimmed.is_empty() && trimmed != "ACTIVATE" {
-                            let _ = IPC_CHANNEL.0.send(PathBuf::from(trimmed));
+                        let message = line.trim_end_matches(['\r', '\n']);
+                        let message = match message {
+                            "" => None,
+                            "ACTIVATE" => Some(IpcMessage::Activate),
+                            path => Some(IpcMessage::Open(PathBuf::from(path))),
+                        };
+                        if let Some(message) = message {
+                            if IPC_CHANNEL.0.send(message).is_ok() {
+                                wake_gui();
+                            }
                         }
                     }
                 }
@@ -68,12 +100,12 @@ pub fn start_listener() {
     }
 }
 
-/// Check for any new files sent from secondary instances.
-pub fn check_incoming_file() -> Option<PathBuf> {
+/// Check for the latest request sent from a secondary instance.
+pub fn check_incoming_message() -> Option<IpcMessage> {
     if let Ok(rx) = IPC_CHANNEL.1.lock() {
         let mut latest = None;
-        while let Ok(path) = rx.try_recv() {
-            latest = Some(path);
+        while let Ok(message) = rx.try_recv() {
+            latest = Some(message);
         }
         return latest;
     }
@@ -86,5 +118,8 @@ pub fn cleanup() {
     {
         let sock = socket_path();
         let _ = std::fs::remove_file(&sock);
+    }
+    if let Ok(mut repaint_context) = REPAINT_CONTEXT.lock() {
+        *repaint_context = None;
     }
 }

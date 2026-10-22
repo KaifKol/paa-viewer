@@ -9,6 +9,7 @@ Cross-platform texture viewer, converter, and power-of-two (POT) resizer for Boh
   - RGBA channel inspection: view Full RGBA, RGB only, individual Red, Green, Blue channels, or Alpha as grayscale.
   - Real-time pixel inspector: hover cursor over any pixel to view (X, Y) coordinates, RGBA values, hex code `#RRGGBBAA`, and color swatch.
   - Drag & Drop: drag any `.paa`, `.png`, `.jpg`, `.tga`, `.bmp`, or `.webp` into the window to load immediately.
+  - Single-instance activation: opening another file switches the running window and brings it forward.
 
 - **System Context Menu & File Association Integration**:
   - **Linux Integration**:

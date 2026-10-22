@@ -14,29 +14,25 @@ PAA Viewer is a desktop application for PAA and PAC textures. It opens textures 
 [*]Download or subscribe to the PAA Viewer mod in Steam Workshop.
 [*]Wait until Steam finishes downloading the mod.
 [*]Open the downloaded mod and unpack it.
-[*]Open the [code]paa-viewer[/code] folder inside the unpacked mod.
-[*]Take the package for your operating system from that folder.
+[*]Open the [b]paa-viewer[/b] folder inside the unpacked mod.
+[*]Take the Windows or Linux package from that folder.
 [/list]
 
-The unpacked mod contains:
+The unpacked mod contains two folders:
 
-[code]downloaded-mod/
-|-- addons/
-|   `-- paa-viewer.pbo
-`-- paa-viewer/
-    |-- paa-viewer-windows-x64.zip
-    `-- PAA_Viewer-x86_64.AppImage[/code]
-
-The desktop application is in the [code]paa-viewer[/code] folder. The [code]addons[/code] folder contains the Workshop PBO and is not used to start the viewer.
+[list]
+[*][b]paa-viewer[/b]: the Windows ZIP and Linux AppImage.
+[*][b]addons[/b]: the Workshop PBO. It is not used to start the viewer.
+[/list]
 
 [h2]Steam installation on Windows[/h2]
 
 [list=1]
-[*]Open the [code]paa-viewer[/code] folder from the unpacked mod.
-[*]Copy [code]paa-viewer-windows-x64.zip[/code] to a permanent location.
+[*]Open the [b]paa-viewer[/b] folder from the unpacked mod.
+[*]Copy [b]paa-viewer-windows-x64.zip[/b] to a permanent location.
 [*]Extract the ZIP archive.
 [*]Open the extracted folder.
-[*]Run [code]paa-viewer.exe[/code].
+[*]Run [b]paa-viewer.exe[/b].
 [/list]
 
 Do not run the executable directly from the ZIP archive. Move the application before enabling file associations because Windows stores its current path.
@@ -44,14 +40,11 @@ Do not run the executable directly from the ZIP archive. Move the application be
 [h2]Steam installation on Linux[/h2]
 
 [list=1]
-[*]Open the [code]paa-viewer[/code] folder from the unpacked mod.
-[*]Copy [code]PAA_Viewer-x86_64.AppImage[/code] to a permanent location.
-[*]Make the file executable.
-[*]Run the AppImage.
+[*]Open the [b]paa-viewer[/b] folder from the unpacked mod.
+[*]Copy [b]PAA_Viewer-x86_64.AppImage[/b] to a permanent location.
+[*]Make the file executable with [b]chmod +x PAA_Viewer-x86_64.AppImage[/b].
+[*]Run it with [b]./PAA_Viewer-x86_64.AppImage[/b].
 [/list]
-
-[code]chmod +x PAA_Viewer-x86_64.AppImage
-./PAA_Viewer-x86_64.AppImage[/code]
 
 [b]Workshop updates:[/b] Steam updates the downloaded mod, not the standalone copy. After an update, copy and extract the new files from the mod again.
 
@@ -64,27 +57,22 @@ Open the latest release:
 [b]Windows[/b]
 
 [list=1]
-[*]Download [code]paa-viewer-windows-x64.zip[/code].
+[*]Download [b]paa-viewer-windows-x64.zip[/b].
 [*]Extract it to a permanent folder.
-[*]Run [code]paa-viewer.exe[/code].
+[*]Run [b]paa-viewer.exe[/b].
 [/list]
 
 [b]Linux AppImage[/b]
 
 [list=1]
-[*]Download [code]PAA_Viewer-x86_64.AppImage[/code].
-[*]Make it executable.
-[*]Run it.
+[*]Download [b]PAA_Viewer-x86_64.AppImage[/b].
+[*]Make it executable with [b]chmod +x PAA_Viewer-x86_64.AppImage[/b].
+[*]Run it with [b]./PAA_Viewer-x86_64.AppImage[/b].
 [/list]
-
-[code]chmod +x PAA_Viewer-x86_64.AppImage
-./PAA_Viewer-x86_64.AppImage[/code]
 
 [b]Debian, Ubuntu, and Linux Mint[/b]
 
-Download the [code].deb[/code] file and install it with:
-
-[code]sudo apt install ./paa-viewer_0.1.2_amd64.deb[/code]
+Download the [b].deb[/b] file and install it with [b]sudo apt install ./paa-viewer_0.1.2_amd64.deb[/b].
 
 [h2]What PAA Viewer can do[/h2]
 
@@ -137,48 +125,17 @@ Opening a second file while PAA Viewer is running reuses the existing window.
 
 [h2]Command line[/h2]
 
-The command line can inspect metadata, convert files, and process directories.
-
-The examples below assume the executable is available as [code]paa-viewer[/code]. On Windows, run [code].\paa-viewer.exe[/code] from the extracted application folder if it is not in [code]PATH[/code].
-
-[code]# Show PAA metadata
-paa-viewer info texture.paa
-
-# Write metadata as JSON
-paa-viewer info texture.paa --json
-
-# Convert PAA to PNG
-paa-viewer convert texture.paa
-
-# Convert PNG to DXT5 PAA
-paa-viewer convert source.png texture.paa --format dxt5
-
-# Convert and round dimensions to powers of two
-paa-viewer convert source.png texture.paa --format dxt5 --resize pot-nearest
-
-# Fit inside 1024x1024 and preserve aspect ratio
-paa-viewer convert source.png texture.paa --resize fit:1024x1024
-
-# Convert a directory to PAA
-paa-viewer batch ./source --out-dir ./paa --to paa --format dxt5 --resize pot-nearest
-
-# Convert PAA files to PNG and include subdirectories
-paa-viewer batch ./paa --out-dir ./png --to png --recursive[/code]
-
-When no output path is provided, PAA and PAC files are converted to PNG. Other supported images are converted to PAA.
-
-[h2]Resize options[/h2]
+The command line can inspect metadata, convert individual files, and process entire directories.
 
 [list]
-[*][code]0.5[/code], [code]2.0[/code], or another positive number: scale by that factor.
-[*][code]pot-nearest[/code]: round each dimension to the closest power of two.
-[*][code]pot-next[/code]: round each dimension up.
-[*][code]pot-prev[/code]: round each dimension down.
-[*][code]WIDTHxHEIGHT[/code]: stretch to exact dimensions.
-[*][code]fit:WIDTHxHEIGHT[/code]: preserve aspect ratio and pad to exact dimensions.
+[*]Run [b]paa-viewer --help[/b] to see the available commands.
+[*]Run [b]paa-viewer COMMAND --help[/b] for options accepted by a command.
+[*]On Windows, use [b].\paa-viewer.exe[/b] from the extracted application folder.
 [/list]
 
-Available resampling filters are [code]lanczos[/code], [code]triangle[/code], and [code]nearest[/code].
+Commands, resize modes, and complete examples are documented here:
+
+[url=https://github.com/KaifKol/paa-viewer#command-line]Command-line documentation on GitHub[/url]
 
 [h2]File associations and right-click actions[/h2]
 
@@ -196,16 +153,12 @@ System integration is optional. Enable it only after moving the application to i
 [b]Linux[/b]
 
 [list]
-[*]Register the [code]image/x-paa[/code] MIME type.
+[*]Register the [b]image/x-paa[/b] MIME type.
 [*]Set PAA Viewer as the default application for PAA and PAC files.
 [*]Install conversion actions for Dolphin, Nautilus, and Nemo.
 [/list]
 
-Use [b]System Integration[/b] in the desktop application, or run:
-
-[code]paa-viewer install
-paa-viewer context-menu status
-paa-viewer uninstall[/code]
+Use [b]System Integration[/b] in the desktop application. Command-line alternatives are listed in the GitHub documentation above.
 
 [h2]Important behavior[/h2]
 

@@ -109,6 +109,37 @@ fn nemo_conversion_actions_accept_exactly_one_input() {
     }
 }
 
+#[cfg(target_os = "linux")]
+#[test]
+fn isolated_linux_install_writes_correct_thumbnailer_entry() {
+    let home = TestHome::new();
+    install_in_isolated_home(&home);
+
+    let thumbnailer = read_installed(&home, "thumbnailers/paa-viewer.thumbnailer");
+    assert!(
+        thumbnailer.contains("[Thumbnailer Entry]"),
+        "thumbnailer must contain [Thumbnailer Entry] section"
+    );
+
+    let exec = thumbnailer
+        .lines()
+        .find_map(|line| line.strip_prefix("Exec="))
+        .expect("thumbnailer must define Exec line");
+    assert!(
+        exec.ends_with("thumbnail %i %o --size %s") || exec.contains(" thumbnail %i %o --size %s"),
+        "Exec must call thumbnail %i %o --size %s, got: {exec}"
+    );
+
+    let mime_type = thumbnailer
+        .lines()
+        .find_map(|line| line.strip_prefix("MimeType="))
+        .expect("thumbnailer must define MimeType line");
+    assert_eq!(
+        mime_type, "image/x-paa;",
+        "MimeType must be image/x-paa;"
+    );
+}
+
 #[test]
 fn clean_path_preserves_unmatched_quote_path() {
     let path = PathBuf::from("'");

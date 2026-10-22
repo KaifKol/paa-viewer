@@ -105,6 +105,17 @@ pub enum Commands {
         #[command(subcommand)]
         action: ContextMenuAction,
     },
+    #[command(about = "Generate a PNG thumbnail preview of a PAA file for file managers")]
+    Thumbnail {
+        #[arg(help = "Source PAA file path")]
+        input: PathBuf,
+
+        #[arg(help = "Destination thumbnail PNG path")]
+        output: PathBuf,
+
+        #[arg(short, long, default_value_t = 256, help = "Maximum bounding width/height in pixels")]
+        size: u32,
+    },
 }
 #[derive(Debug, Subcommand)]
 pub enum ContextMenuAction {

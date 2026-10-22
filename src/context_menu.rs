@@ -191,7 +191,8 @@ impl ContextMenuManager {
         let data_dir = Self::linux_user_data_dir();
         let desktop_file = data_dir.join("applications").join("paa-viewer.desktop");
         let mime_file = data_dir.join("mime").join("packages").join("paa-viewer.xml");
-        desktop_file.exists() && mime_file.exists()
+        let thumbnailer_file = data_dir.join("thumbnailers").join("paa-viewer.thumbnailer");
+        desktop_file.exists() && mime_file.exists() && thumbnailer_file.exists()
     }
 
     pub fn install_linux(exe_path: &Path) -> Result<String, String> {
@@ -204,6 +205,7 @@ impl ContextMenuManager {
         let nemo_actions_dir = data_dir.join("nemo").join("actions");
         let icons_svg_dir = data_dir.join("icons").join("hicolor").join("scalable").join("apps");
         let icons_png_dir = data_dir.join("icons").join("hicolor").join("256x256").join("apps");
+        let thumbnailer_dir = data_dir.join("thumbnailers");
 
         std::fs::create_dir_all(&app_dir).map_err(|e| e.to_string())?;
         std::fs::create_dir_all(&mime_dir).map_err(|e| e.to_string())?;
@@ -213,6 +215,7 @@ impl ContextMenuManager {
         std::fs::create_dir_all(&nemo_actions_dir).ok();
         std::fs::create_dir_all(&icons_svg_dir).ok();
         std::fs::create_dir_all(&icons_png_dir).ok();
+        std::fs::create_dir_all(&thumbnailer_dir).map_err(|e| e.to_string())?;
 
         let exe_str = exe_path.to_string_lossy();
 
@@ -361,6 +364,15 @@ Quote=double
         let png_icon = include_bytes!("../packaging/paa-viewer.png");
         let _ = std::fs::write(icons_png_dir.join("paa-viewer.png"), png_icon);
 
+        // 6b. Install FreeDesktop Thumbnailer entry
+        let thumbnailer_content = format!(
+            "[Thumbnailer Entry]\nExec=\"{exe_str}\" thumbnail %i %o --size %s\nMimeType=image/x-paa;\n"
+        );
+        std::fs::write(
+            thumbnailer_dir.join("paa-viewer.thumbnailer"),
+            thumbnailer_content,
+        )
+        .map_err(|e| format!("Failed to write thumbnailer entry: {e}"))?;
         // 7. Update system MIME and desktop databases
         let _ = Command::new("update-mime-database")
             .arg(data_dir.join("mime"))
@@ -383,11 +395,13 @@ Quote=double
              - Desktop file: {}\n\
              - MIME database: {}\n\
              - Dolphin context menus: {}\n\
+             - Thumbnailer: {}\n\
              - Nautilus scripts: {}\n\
              - Nemo actions: {}",
             app_dir.join("paa-viewer.desktop").display(),
             mime_dir.join("paa-viewer.xml").display(),
             kio_dir.join("paa-convert-png.desktop").display(),
+            thumbnailer_dir.join("paa-viewer.thumbnailer").display(),
             nautilus_scripts_dir.display(),
             nemo_actions_dir.display()
         ))
@@ -401,7 +415,7 @@ Quote=double
         let kservices_dir = data_dir.join("kservices5").join("ServiceMenus");
         let nautilus_scripts_dir = data_dir.join("nautilus").join("scripts");
         let nemo_actions_dir = data_dir.join("nemo").join("actions");
-
+        let thumbnailer_dir = data_dir.join("thumbnailers");
         let _ = std::fs::remove_file(app_dir.join("paa-viewer.desktop"));
         let _ = std::fs::remove_file(mime_dir.join("paa-viewer.xml"));
         let _ = std::fs::remove_file(kio_dir.join("paa-convert-png.desktop"));
@@ -414,6 +428,7 @@ Quote=double
         let _ = std::fs::remove_file(nautilus_scripts_dir.join("Convert to PAA (DXT5 POT)"));
         let _ = std::fs::remove_file(nemo_actions_dir.join("paa-to-png.nemo_action"));
         let _ = std::fs::remove_file(nemo_actions_dir.join("image-to-paa.nemo_action"));
+        let _ = std::fs::remove_file(thumbnailer_dir.join("paa-viewer.thumbnailer"));
 
         Self::update_mimeapps_list("paa-viewer.desktop", "image/x-paa", false);
 
@@ -539,6 +554,17 @@ Quote=double
         #[cfg(target_os = "windows")]
         {
             let output = Command::new("reg")
+                .args(["query", r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}\InprocServer32"])
+                .output();
+            if let Ok(out) = output {
+                if !out.status.success() {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+            let output = Command::new("reg")
                 .args(["query", r"HKCU\Software\Classes\.paa"])
                 .output();
             if let Ok(out) = output {
@@ -548,8 +574,21 @@ Quote=double
         false
     }
 
+    pub fn windows_thumbnail_dll_path(exe_path: &Path) -> PathBuf {
+        let exe = exe_path.to_string_lossy();
+        let directory_end = exe
+            .rfind(['\\', '/'])
+            .map_or(0, |separator| separator + 1);
+        PathBuf::from(format!(
+            "{}paa_thumbnail_provider.dll",
+            &exe[..directory_end]
+        ))
+    }
+
     pub fn generate_windows_reg(exe_path: &Path) -> String {
         let exe_str = exe_path.to_string_lossy().replace('\\', "\\\\");
+        let dll_path = Self::windows_thumbnail_dll_path(exe_path);
+        let dll_str = dll_path.to_string_lossy().replace('\\', "\\\\");
 
         format!(
             r#"Windows Registry Editor Version 5.00
@@ -663,11 +702,33 @@ Quote=double
 
 [HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.webp\Shell\ConvertToPaaDxt5\command]
 @="\"{exe_str}\" convert \"%1\" --format dxt5 --resize pot-nearest --notify"
+
+; Shell Thumbnail Provider registration for .paa and .pac
+[HKEY_CURRENT_USER\Software\Classes\CLSID\{{69A507B4-551F-4005-92E2-48512EB2F517}}]
+@="PAA Thumbnail Handler"
+
+[HKEY_CURRENT_USER\Software\Classes\CLSID\{{69A507B4-551F-4005-92E2-48512EB2F517}}\InprocServer32]
+@="{dll_str}"
+"ThreadingModel"="Apartment"
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.paa\ShellEx\{{E357FCCD-A995-4576-B01F-234630154E96}}]
+@="{{69A507B4-551F-4005-92E2-48512EB2F517}}"
+
+[HKEY_CURRENT_USER\Software\Classes\SystemFileAssociations\.pac\ShellEx\{{E357FCCD-A995-4576-B01F-234630154E96}}]
+@="{{69A507B4-551F-4005-92E2-48512EB2F517}}"
 "#
         )
     }
 
     pub fn install_windows(exe_path: &Path) -> Result<String, String> {
+        let thumbnail_dll = Self::windows_thumbnail_dll_path(exe_path);
+        if !thumbnail_dll.is_file() {
+            return Err(format!(
+                "Windows thumbnail provider is missing: {}",
+                thumbnail_dll.display()
+            ));
+        }
+
         let reg_content = Self::generate_windows_reg(exe_path);
         let temp_reg = std::env::temp_dir().join("paa-viewer-install.reg");
 
@@ -688,7 +749,7 @@ Quote=double
         let _ = std::fs::remove_file(&temp_reg);
 
         if status.success() {
-            Ok("Registered Windows file associations and context menu actions successfully".into())
+            Ok("Registered Windows file associations, context menu actions, and thumbnail previews successfully".into())
         } else {
             Err("reg.exe returned non-zero exit status during import".into())
         }
@@ -710,15 +771,17 @@ Quote=double
             r"HKCU\Software\Classes\SystemFileAssociations\.tga\Shell\ConvertToPaaDxt5",
             r"HKCU\Software\Classes\SystemFileAssociations\.bmp\Shell\ConvertToPaaDxt5",
             r"HKCU\Software\Classes\SystemFileAssociations\.webp\Shell\ConvertToPaaDxt5",
+            r"HKCU\Software\Classes\SystemFileAssociations\.paa\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}",
+            r"HKCU\Software\Classes\SystemFileAssociations\.pac\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}",
+            r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}",
         ];
-
         for key in &keys_to_delete {
             let _ = Command::new("reg")
                 .args(["delete", key, "/f"])
                 .status();
         }
 
-        Ok("Removed Windows file associations and context menu actions successfully".into())
+        Ok("Removed Windows file associations, context menu actions, and thumbnail previews successfully".into())
     }
 }
 
@@ -746,5 +809,10 @@ mod tests {
         assert!(reg.contains("ConvertToPaaDxt5"));
         assert!(reg.contains(".pac"));
         assert!(reg.contains(".webp"));
+        assert!(reg.contains("{69A507B4-551F-4005-92E2-48512EB2F517}"));
+        assert!(reg.contains(r"C:\\Tools\\paa_thumbnail_provider.dll"));
+        assert!(reg.contains(r"SystemFileAssociations\.paa\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"));
+        assert!(reg.contains(r"SystemFileAssociations\.pac\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"));
+        assert!(reg.contains(r#""ThreadingModel"="Apartment""#));
     }
 }

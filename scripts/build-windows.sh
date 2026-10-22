@@ -16,10 +16,15 @@ if ! rustup target list --installed | grep -q "${TARGET}"; then
     rustup target add "${TARGET}" || true
 fi
 
-# Build for Windows
+# Build the application and Explorer thumbnail provider
 echo "Compiling for ${TARGET}..."
-if cargo build --target "${TARGET}" --release; then
+if cargo build --target "${TARGET}" --release \
+    && CARGO_TARGET_DIR="${ROOT_DIR}/target" cargo build \
+        --manifest-path crates/windows-thumbnail-provider/Cargo.toml \
+        --target "${TARGET}" \
+        --release; then
     EXE_SOURCE="target/${TARGET}/release/paa-viewer.exe"
+    DLL_SOURCE="target/${TARGET}/release/paa_thumbnail_provider.dll"
 else
     echo "Cross-compilation using ${TARGET} failed. If running in CI or on Windows, ensure MinGW or MSVC is installed."
     exit 1
@@ -31,19 +36,21 @@ trap 'rm -rf "${STAGE_DIR}"' EXIT
 
 mkdir -p "${STAGE_DIR}/paa-viewer"
 cp "${EXE_SOURCE}" "${STAGE_DIR}/paa-viewer/"
-cp packaging/windows/paa-viewer-context-menu.reg "${STAGE_DIR}/paa-viewer/"
+cp "${DLL_SOURCE}" "${STAGE_DIR}/paa-viewer/"
 cp packaging/paa-viewer.ico "${STAGE_DIR}/paa-viewer/"
 cp README.md "${STAGE_DIR}/paa-viewer/"
 
 # Add Windows quick install batch script
 cat << 'EOF' > "${STAGE_DIR}/paa-viewer/install-context-menu.bat"
 @echo off
-echo Registering PAA Viewer context menu and file associations...
-reg import paa-viewer-context-menu.reg
+setlocal
+cd /d "%~dp0"
+echo Registering PAA Viewer file associations, context menu, and thumbnail preview...
+paa-viewer.exe install
 if %ERRORLEVEL% EQU 0 (
-    echo Successfully registered PAA Viewer in Windows context menu!
+    echo Successfully registered PAA Viewer!
 ) else (
-    echo Failed to import registry keys. Please right-click install-context-menu.bat and select 'Run as Administrator'.
+    echo Registration failed.
 )
 pause
 EOF

@@ -193,6 +193,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Exported Windows registry file to: {}", output.display());
             }
         },
+        Some(Commands::Thumbnail { input, output, size }) => {
+            paa_viewer::thumbnail::write_paa_thumbnail(&input, &output, size)?;
+        }
     }
 
     Ok(())

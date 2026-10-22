@@ -25,6 +25,7 @@ mkdir -p "${STAGE_DIR}/usr/share/mime/packages"
 mkdir -p "${STAGE_DIR}/usr/share/kio/servicemenus"
 mkdir -p "${STAGE_DIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${STAGE_DIR}/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "${STAGE_DIR}/usr/share/thumbnailers"
 
 # Copy control files
 cp packaging/deb/control "${STAGE_DIR}/DEBIAN/"
@@ -43,6 +44,7 @@ cp packaging/paa-viewer.desktop "${STAGE_DIR}/usr/share/applications/"
 cp packaging/paa-viewer.xml "${STAGE_DIR}/usr/share/mime/packages/"
 cp packaging/paa-viewer.svg "${STAGE_DIR}/usr/share/icons/hicolor/scalable/apps/"
 cp packaging/paa-viewer.png "${STAGE_DIR}/usr/share/icons/hicolor/256x256/apps/"
+cp packaging/paa-viewer.thumbnailer "${STAGE_DIR}/usr/share/thumbnailers/"
 
 mkdir -p "${ROOT_DIR}/dist"
 OUTPUT_DEB="${ROOT_DIR}/dist/paa-viewer_0.1.2_amd64.deb"

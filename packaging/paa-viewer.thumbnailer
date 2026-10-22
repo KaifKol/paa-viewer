@@ -1,0 +1,4 @@
+[Thumbnailer Entry]
+TryExec=paa-viewer
+Exec=paa-viewer thumbnail %i %o --size %s
+MimeType=image/x-paa;

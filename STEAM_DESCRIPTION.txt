@@ -1,5 +1,3 @@
-SHORT DESCRIPTION
-
 View, inspect, resize, and convert PAA textures for Arma 3, DayZ, and other Bohemia Interactive games.
 
 ABOUT THIS SOFTWARE
@@ -137,13 +135,14 @@ Commands, resize modes, and complete examples are documented here:
 
 [url=https://github.com/KaifKol/paa-viewer#command-line]Command-line documentation on GitHub[/url]
 
-[h2]File associations and right-click actions[/h2]
+[h2]File associations, right-click actions, and thumbnail previews[/h2]
 
-System integration is optional. Enable it only after moving the application to its final location.
+Thumbnail previews, file associations, and context menus are enabled by [b]System Integration[/b]. Note that file-manager thumbnail caches may need to be refreshed or the file manager reopened to display newly generated previews. Enable integration only after moving the application to its final location.
 
 [b]Windows[/b]
 
 [list]
+[*]Generate thumbnail previews for PAA and PAC files in Windows Explorer.
 [*]Open PAA and PAC files by double-clicking them.
 [*]Convert PAA and PAC files to PNG from Explorer.
 [*]Convert PNG, JPEG, TGA, BMP, and WebP images to DXT5 PAA.
@@ -153,13 +152,13 @@ System integration is optional. Enable it only after moving the application to i
 [b]Linux[/b]
 
 [list]
+[*]Generate thumbnail previews for PAA and PAC files in FreeDesktop file managers.
 [*]Register the [b]image/x-paa[/b] MIME type.
 [*]Set PAA Viewer as the default application for PAA and PAC files.
 [*]Install conversion actions for Dolphin, Nautilus, and Nemo.
 [/list]
 
 Use [b]System Integration[/b] in the desktop application. Command-line alternatives are listed in the GitHub documentation above.
-
 [h2]Important behavior[/h2]
 
 [list]

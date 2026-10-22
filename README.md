@@ -36,7 +36,7 @@ chmod +x PAA_Viewer-x86_64.AppImage
 - Generate PAA mipmaps automatically
 - Resize by a scale factor or align each dimension to a power of two
 - Convert one file or a directory from the command line
-- Add file associations and conversion actions to Windows Explorer or Linux
+- Add file associations, thumbnail previews, and conversion actions to Windows Explorer or Linux
   file managers
 
 ## Using the desktop app
@@ -133,11 +133,11 @@ option list.
 PAA files may contain LZO-compressed DXT mipmaps or LZ77-compressed ARGB
 mipmaps. The viewer reads and writes both forms.
 
-## File associations and context menus
+## File associations, context menus, and thumbnail previews
 
-The app can register itself as the handler for `.paa` and `.pac` files. It
-also adds right-click actions for opening PAA files and converting between PAA
-and common image formats.
+The app can register itself as the handler for `.paa` and `.pac` files, providing file associations, right-click conversion actions, and thumbnail previews in Windows Explorer and Linux FreeDesktop file managers.
+
+Thumbnail previews and file associations are enabled by **System Integration**. Note that file-manager thumbnail caches may need to be refreshed or the file manager reopened to display newly generated previews.
 
 Use the **System Integration** section in the app, or run:
 
@@ -161,6 +161,16 @@ cargo build --release
 ```
 
 The binary is written to `target/release/paa-viewer`.
+
+For Windows Explorer thumbnails, also build the Shell extension:
+
+```bash
+CARGO_TARGET_DIR=target cargo build --release \
+  --manifest-path crates/windows-thumbnail-provider/Cargo.toml
+```
+
+Keep `paa_thumbnail_provider.dll` next to `paa-viewer.exe`, then run
+`paa-viewer.exe install`.
 
 Linux builds require the OpenGL and X11 development packages used by `eframe`.
 On Debian and Ubuntu:

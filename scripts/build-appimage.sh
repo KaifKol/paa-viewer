@@ -20,6 +20,7 @@ mkdir -p "${APPDIR}/usr/share/applications"
 mkdir -p "${APPDIR}/usr/share/mime/packages"
 mkdir -p "${APPDIR}/usr/share/icons/hicolor/scalable/apps"
 mkdir -p "${APPDIR}/usr/share/icons/hicolor/256x256/apps"
+mkdir -p "${APPDIR}/usr/share/thumbnailers"
 
 # Copy AppRun, desktop file, icon
 cp packaging/appimage/AppRun "${APPDIR}/"
@@ -32,6 +33,7 @@ cp packaging/paa-viewer.svg "${APPDIR}/"
 cp packaging/paa-viewer.svg "${APPDIR}/usr/share/icons/hicolor/scalable/apps/"
 cp packaging/paa-viewer.png "${APPDIR}/usr/share/icons/hicolor/256x256/apps/"
 cp packaging/paa-viewer.xml "${APPDIR}/usr/share/mime/packages/"
+cp packaging/paa-viewer.thumbnailer "${APPDIR}/usr/share/thumbnailers/"
 
 # Copy binaries
 cp target/release/paa-viewer "${APPDIR}/usr/bin/"

@@ -8,16 +8,51 @@ PAA Viewer is a desktop utility for working with PAA and PAC texture files. It o
 
 The desktop app covers normal one-file work. The command line handles repeatable conversion and whole directories.
 
-[h2]Installation from Steam[/h2]
+[h2]Installation from Steam Workshop[/h2]
+
+The Steam Workshop download is a mod package that contains the desktop application. Subscribing to the mod downloads the files, but it does not install PAA Viewer as a normal Steam application.
 
 [list=1]
-[*]Open PAA Viewer in your Steam Library.
-[*]Select [b]Install[/b] and wait for Steam to finish downloading the application.
-[*]Select [b]Play[/b] to open the desktop interface.
-[*]Optional: open [b]System Integration[/b] inside PAA Viewer and select [b]Register in System[/b] to associate PAA and PAC files with the application.
+[*]Subscribe to the PAA Viewer mod in Steam Workshop.
+[*]Wait for Steam to finish downloading the mod.
+[*]Open the downloaded mod directory and unpack the mod.
+[*]Open the [code]paa-viewer[/code] directory inside the unpacked mod. Do not use the [code]addons[/code] directory: it contains the Workshop PBO, not the desktop application.
+[*]Copy the package for your operating system to a permanent directory outside the downloaded mod.
 [/list]
 
-Steam manages the installation and application updates. Removing PAA Viewer through Steam does not modify your source textures or exported files.
+The unpacked mod has this layout:
+
+[code]paa-viewer/
+|-- addons/
+|   `-- paa-viewer.pbo
+`-- paa-viewer/
+    |-- paa-viewer-windows-x64.zip
+    `-- PAA_Viewer-x86_64.AppImage[/code]
+
+[b]Windows x64[/b]
+
+[list=1]
+[*]Open the inner [code]paa-viewer[/code] directory.
+[*]Copy [code]paa-viewer-windows-x64.zip[/code] to the directory where you want to keep the application.
+[*]Extract the ZIP archive. Do not run the executable from inside the archive.
+[*]Open the extracted directory and run [code]paa-viewer.exe[/code].
+[*]Optional: open [b]System Integration[/b] and select [b]Register in System[/b] to add PAA and PAC file associations and Explorer actions.
+[/list]
+
+[b]Linux x64[/b]
+
+[list=1]
+[*]Open the inner [code]paa-viewer[/code] directory.
+[*]Copy [code]PAA_Viewer-x86_64.AppImage[/code] to a permanent directory.
+[*]Make the AppImage executable and start it:
+[/list]
+
+[code]chmod +x PAA_Viewer-x86_64.AppImage
+./PAA_Viewer-x86_64.AppImage[/code]
+
+Register system integration only after moving or extracting the application to its final location. The registered file associations store the executable path.
+
+When the Workshop item is updated, Steam updates the mod package. Copy or extract the new application files again to update the standalone installation. Removing the Workshop mod does not delete textures or files exported by PAA Viewer.
 
 [h2]Installation from GitHub[/h2]
 

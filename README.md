@@ -147,7 +147,7 @@ mipmaps. The viewer reads and writes both forms.
 
 The app can register itself as the handler for `.paa` and `.pac` files, providing file associations, right-click conversion actions, and thumbnail previews in Windows Explorer and Linux FreeDesktop file managers.
 
-Thumbnail previews and file associations are enabled by **System Integration**. The app refreshes outdated Windows registrations when it starts. File-manager thumbnail caches may need to be refreshed or the file manager reopened before newly generated previews appear.
+Thumbnail previews and file associations are enabled by **System Integration**. On Windows, the app automatically rewrites its registration when the app version or executable location changes. An explicit uninstall keeps automatic registration disabled. File-manager thumbnail caches may need to be refreshed or the file manager reopened before newly generated previews appear.
 
 Open **Settings** from the top toolbar in the desktop app, or run:
 

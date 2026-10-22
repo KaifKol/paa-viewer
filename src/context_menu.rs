@@ -80,27 +80,34 @@ impl ContextMenuManager {
             return;
         }
 
-        let needs_install = if !Self::is_installed() {
-            true
-        } else {
-            #[cfg(not(target_os = "windows"))]
-            {
-                let target_exe = match Self::resolve_executable_path() {
-                    Ok(e) => e,
-                    Err(_) => return,
-                };
-                let target_exe_str = target_exe.to_string_lossy();
-                let desktop_file = Self::linux_user_data_dir().join("applications").join("paa-viewer.desktop");
-                if let Ok(content) = std::fs::read_to_string(&desktop_file) {
-                    // Re-register if desktop file has stale /tmp/.mount_ or points to different exe
-                    content.contains("/tmp/.mount_") || !content.contains(&*target_exe_str)
-                } else {
-                    true
-                }
-            }
+        let needs_install = {
             #[cfg(target_os = "windows")]
             {
-                false
+                let target_exe = match Self::resolve_executable_path() {
+                    Ok(exe) => exe,
+                    Err(_) => return,
+                };
+                !Self::windows_registration_is_current(&target_exe)
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                if !Self::is_installed_linux() {
+                    true
+                } else {
+                    let target_exe = match Self::resolve_executable_path() {
+                        Ok(exe) => exe,
+                        Err(_) => return,
+                    };
+                    let target_exe_str = target_exe.to_string_lossy();
+                    let desktop_file = Self::linux_user_data_dir()
+                        .join("applications")
+                        .join("paa-viewer.desktop");
+                    if let Ok(content) = std::fs::read_to_string(&desktop_file) {
+                        content.contains("/tmp/.mount_") || !content.contains(&*target_exe_str)
+                    } else {
+                        true
+                    }
+                }
             }
         };
 
@@ -553,35 +560,61 @@ Quote=double
     pub fn is_installed_windows() -> bool {
         #[cfg(target_os = "windows")]
         {
-            let required_keys = [
-                (
-                    r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}\InprocServer32",
-                    None,
-                ),
-                (r"HKCU\Software\Classes\.paa", None),
-                (
-                    r"HKCU\Software\Classes\PaaViewer.Texture",
-                    Some("TypeOverlay"),
-                ),
-                (
-                    r"HKCU\Software\Classes\PaaViewer.Texture",
-                    Some("ThumbnailCutoff"),
-                ),
-            ];
-
-            required_keys.iter().all(|&(key, value)| {
-                let mut command = Command::new("reg");
-                command.args(["query", key]);
-                if let Some(value) = value {
-                    command.args(["/v", value]);
-                }
-                command.output().is_ok_and(|output| output.status.success())
-            })
+            Self::resolve_executable_path()
+                .is_ok_and(|exe_path| Self::windows_registration_is_current(&exe_path))
         }
         #[cfg(not(target_os = "windows"))]
         {
             false
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn windows_registration_is_current(exe_path: &Path) -> bool {
+        let registration_marker = Self::windows_registration_marker_key(exe_path);
+        let required_keys = [
+            (
+                r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}\InprocServer32",
+                None,
+            ),
+            (r"HKCU\Software\Classes\.paa", None),
+            (
+                r"HKCU\Software\Classes\PaaViewer.Texture",
+                Some("TypeOverlay"),
+            ),
+            (
+                r"HKCU\Software\Classes\PaaViewer.Texture",
+                Some("ThumbnailCutoff"),
+            ),
+            (registration_marker.as_str(), None),
+        ];
+
+        required_keys.iter().all(|&(key, value)| {
+            let mut command = Command::new("reg");
+            command.args(["query", key]);
+            if let Some(value) = value {
+                command.args(["/v", value]);
+            }
+            command.output().is_ok_and(|output| output.status.success())
+        })
+    }
+
+    fn windows_registration_marker_key(exe_path: &Path) -> String {
+        const FNV_OFFSET_BASIS: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+
+        let path_hash = exe_path
+            .as_os_str()
+            .as_encoded_bytes()
+            .iter()
+            .fold(FNV_OFFSET_BASIS, |hash, byte| {
+                (hash ^ u64::from(*byte)).wrapping_mul(FNV_PRIME)
+            });
+
+        format!(
+            r"HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\PaaViewerRegistration\{}-{path_hash:016x}",
+            env!("CARGO_PKG_VERSION")
+        )
     }
 
     pub fn windows_thumbnail_dll_path(exe_path: &Path) -> PathBuf {
@@ -599,6 +632,8 @@ Quote=double
         let exe_str = exe_path.to_string_lossy().replace('\\', "\\\\");
         let dll_path = Self::windows_thumbnail_dll_path(exe_path);
         let dll_str = dll_path.to_string_lossy().replace('\\', "\\\\");
+        let registration_marker = Self::windows_registration_marker_key(exe_path);
+        let version = env!("CARGO_PKG_VERSION");
 
         format!(
             r#"Windows Registry Editor Version 5.00
@@ -621,6 +656,12 @@ Quote=double
 "FriendlyTypeName"="Bohemia Interactive PAA Texture"
 "TypeOverlay"=""
 "ThumbnailCutoff"=dword:00000001
+
+; Replace the previous marker so a new app version or install path is detected
+[-HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\PaaViewerRegistration]
+
+[{registration_marker}]
+@="PAA Viewer {version}"
 
 [HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\DefaultIcon]
 @="{exe_str},0"
@@ -828,5 +869,20 @@ mod tests {
         assert!(reg.contains(r#""ThreadingModel"="Apartment""#));
         assert!(reg.contains(r#""TypeOverlay"="""#));
         assert!(reg.contains(r#""ThumbnailCutoff"=dword:00000001"#));
+    }
+
+    #[test]
+    fn windows_registration_marker_tracks_version_and_location() {
+        let first_exe = Path::new(r"C:\Tools\paa-viewer.exe");
+        let moved_exe = Path::new(r"D:\Apps\paa-viewer.exe");
+        let first_marker = ContextMenuManager::windows_registration_marker_key(first_exe);
+        let moved_marker = ContextMenuManager::windows_registration_marker_key(moved_exe);
+
+        assert!(first_marker.contains(env!("CARGO_PKG_VERSION")));
+        assert_ne!(first_marker, moved_marker);
+        assert!(
+            ContextMenuManager::generate_windows_reg(first_exe)
+                .contains(&format!("[{first_marker}]"))
+        );
     }
 }

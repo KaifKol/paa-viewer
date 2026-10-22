@@ -45,7 +45,7 @@ cp packaging/paa-viewer.svg "${STAGE_DIR}/usr/share/icons/hicolor/scalable/apps/
 cp packaging/paa-viewer.png "${STAGE_DIR}/usr/share/icons/hicolor/256x256/apps/"
 
 mkdir -p "${ROOT_DIR}/dist"
-OUTPUT_DEB="${ROOT_DIR}/dist/paa-viewer_0.1.1_amd64.deb"
+OUTPUT_DEB="${ROOT_DIR}/dist/paa-viewer_0.1.2_amd64.deb"
 
 # 4. Pack into .deb archive
 if command -v dpkg-deb >/dev/null 2>&1; then

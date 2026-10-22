@@ -1,34 +1,192 @@
 SHORT DESCRIPTION
 
-View, inspect, resize, and convert PAA textures used by Arma 3, DayZ, and other Bohemia Interactive games.
+Open, inspect, resize, and convert PAA textures for Arma 3, DayZ, and other Bohemia Interactive games. Includes mipmap inspection, channel tools, batch conversion, and file manager integration.
 
 ABOUT THIS SOFTWARE
 
-PAA Viewer is a desktop tool for working with Bohemia Interactive texture files. Open a PAA without starting the game, inspect its channels and mipmaps, then export it to a common image format or back to PAA.
+PAA Viewer is a desktop utility for working with PAA and PAC texture files. It opens textures without launching the game, shows the data stored in the file, and converts between PAA and standard image formats.
 
-[h2]Inspect textures[/h2]
+The desktop app covers normal one-file work. The command line handles repeatable conversion and whole directories.
 
-[list]
-[*]Open PAA, PAC, PNG, JPEG, TGA, BMP, and WebP files
-[*]View RGB, alpha, or individual color channels
-[*]Inspect pixel coordinates, RGBA values, PAA metadata, tags, and mipmap levels
-[*]Zoom, pan, fit the image to the window, and switch filtering modes
+[h2]Installation from Steam[/h2]
+
+[list=1]
+[*]Open PAA Viewer in your Steam Library.
+[*]Select [b]Install[/b] and wait for Steam to finish downloading the application.
+[*]Select [b]Play[/b] to open the desktop interface.
+[*]Optional: open [b]System Integration[/b] inside PAA Viewer and select [b]Register in System[/b] to associate PAA and PAC files with the application.
 [/list]
 
-[h2]Convert and resize[/h2]
+Steam manages the installation and application updates. Removing PAA Viewer through Steam does not modify your source textures or exported files.
+
+[h2]Installation from GitHub[/h2]
+
+Release packages are available at:
+
+[url=https://github.com/KaifKol/paa-viewer/releases/latest]github.com/KaifKol/paa-viewer/releases/latest[/url]
+
+[b]Windows x64[/b]
+
+[list=1]
+[*]Download [code]paa-viewer-windows-x64.zip[/code].
+[*]Extract the archive to a permanent directory.
+[*]Run [code]paa-viewer.exe[/code].
+[*]Use [b]System Integration[/b] in the app if you want file associations and right-click conversion actions.
+[/list]
+
+Do not register file associations before moving the executable. The registration stores its current path.
+
+[b]Linux x64: AppImage[/b]
+
+[list=1]
+[*]Download [code]PAA_Viewer-x86_64.AppImage[/code].
+[*]Allow the file to run as a program, or use:
+[/list]
+
+[code]chmod +x PAA_Viewer-x86_64.AppImage
+./PAA_Viewer-x86_64.AppImage[/code]
+
+[b]Debian, Ubuntu, or Linux Mint[/b]
+
+Download the [code].deb[/code] package and install it with:
+
+[code]sudo apt install ./paa-viewer_0.1.2_amd64.deb[/code]
+
+The portable Linux [code].tar.gz[/code] can be extracted and started through [code]AppDir/AppRun[/code] without installing a package.
+
+[h2]Opening textures[/h2]
+
+PAA Viewer accepts:
 
 [list]
-[*]Convert between PAA and common image formats
-[*]Export PAA as DXT1, DXT3, DXT5, ARGB8888, ARGB1555, ARGB4444, or GRAYA
-[*]Generate mipmaps automatically
-[*]Scale textures or align their dimensions to a power of two
+[*]PAA and PAC textures
+[*]PNG
+[*]JPEG
+[*]TGA
+[*]BMP
+[*]WebP
+[/list]
+
+Use [b]Open File[/b], drag a file into the window, or open an associated PAA or PAC file from your file manager. When another file is opened while PAA Viewer is already running, the existing window switches to that file.
+
+[h2]Texture inspection[/h2]
+
+[list]
+[*]View the complete RGBA image, RGB without transparency, alpha as grayscale, or the red, green, and blue channels separately
+[*]Hover over a pixel to see its coordinates, RGBA values, hexadecimal color, and color sample
+[*]Inspect the PAA format, image dimensions, mipmap count, data size, average color, maximum color, alpha flag, and stored tags
+[*]Open individual mipmap levels and check their dimensions, compressed size, and compression ratio
+[*]Zoom toward the cursor with the mouse wheel, drag to pan, switch to 1:1 view, or fit the texture to the window
+[*]Switch between nearest-neighbor and linear display filtering
+[/list]
+
+Display filters and channel controls only change the preview. They do not alter the source file.
+
+[h2]Conversion and export[/h2]
+
+PAA Viewer reads and writes the following PAA formats:
+
+[list]
+[*]DXT1
+[*]DXT3
+[*]DXT5
+[*]ARGB8888
+[*]ARGB1555
+[*]ARGB4444
+[*]GRAYA
+[/list]
+
+Textures can be exported as PAA, PAC, PNG, JPEG, TGA, BMP, or WebP. PAA export can generate a complete mipmap chain automatically.
+
+DXT compression is lossy. Keep the original image when you may need to edit or re-export the texture later.
+
+[h2]Resize tools[/h2]
+
+[list]
+[*]Halve or double the current dimensions from the toolbar
+[*]Scale by a custom factor
+[*]Round each dimension to the nearest, next, or previous power of two
+[*]Stretch to an exact width and height
+[*]Fit inside a target size while preserving aspect ratio and pad the unused area
 [*]Choose Lanczos, bilinear, or nearest-neighbor resampling
+[*]Use common square presets: 256, 512, 1024, and 2048 pixels
 [/list]
 
-[h2]Use it your way[/h2]
+Resizing in the desktop app changes the working copy. The original file is not replaced until you explicitly export to that path.
 
-Use the desktop interface for individual textures or the command line for batch conversion. Optional file associations and right-click actions integrate PAA Viewer with Windows Explorer and Linux file managers.
+[h2]Command line[/h2]
 
-PAA Viewer runs locally and does not require the game to be running.
+The command line can inspect metadata, convert one file, or process a directory. The examples below assume that the executable is available as [code]paa-viewer[/code]. For a Steam installation, open [b]Properties > Installed Files > Browse[/b] and run the executable from that directory. On Windows, use [code].\paa-viewer.exe[/code] when the installation directory is not in [code]PATH[/code].
+
+[code]# Show PAA metadata
+paa-viewer info texture.paa
+
+# Write metadata as JSON
+paa-viewer info texture.paa --json
+
+# Convert PAA to PNG
+paa-viewer convert texture.paa
+
+# Convert PNG to DXT5 PAA and round dimensions to powers of two
+paa-viewer convert source.png texture.paa --format dxt5 --resize pot-nearest
+
+# Fit a texture inside 1024x1024 while preserving its aspect ratio
+paa-viewer convert source.png texture.paa --resize fit:1024x1024
+
+# Convert a directory to PAA
+paa-viewer batch ./source --out-dir ./paa --to paa --format dxt5 --resize pot-nearest
+
+# Convert PAA files to PNG and include subdirectories
+paa-viewer batch ./paa --out-dir ./png --to png --recursive[/code]
+
+When the output path is omitted, PAA and PAC files are converted to PNG. Other supported images are converted to PAA. An explicit output path is created or replaced.
+
+[h2]Power-of-two resize modes[/h2]
+
+[list]
+[*][code]pot-nearest[/code]: round each dimension to the closest power of two
+[*][code]pot-next[/code]: round each dimension up
+[*][code]pot-prev[/code]: round each dimension down
+[*][code]WIDTHxHEIGHT[/code]: stretch to exact dimensions
+[*][code]fit:WIDTHxHEIGHT[/code]: preserve aspect ratio and pad to exact dimensions
+[*][code]0.5[/code], [code]2.0[/code], or another positive number: scale by that factor
+[/list]
+
+Available resampling filters are [code]lanczos[/code], [code]triangle[/code], and [code]nearest[/code].
+
+[h2]File associations and right-click actions[/h2]
+
+System integration is optional and can be added or removed from the desktop app.
+
+[b]Windows[/b]
+
+[list]
+[*]Open PAA and PAC files by double-clicking them
+[*]Convert PAA and PAC files to PNG from Explorer
+[*]Convert PNG, JPEG, TGA, BMP, and WebP images to DXT5 PAA
+[*]Convert PNG images to DXT1 PAA
+[/list]
+
+[b]Linux[/b]
+
+[list]
+[*]Register the [code]image/x-paa[/code] MIME type for PAA and PAC files
+[*]Set PAA Viewer as the default application for those files
+[*]Install conversion actions for Dolphin, Nautilus, and Nemo
+[/list]
+
+The same operations are available from a terminal:
+
+[code]paa-viewer install
+paa-viewer context-menu status
+paa-viewer uninstall[/code]
+
+[h2]Notes[/h2]
+
+[list]
+[*]PAA Viewer works locally. It does not upload textures.
+[*]Arma 3, DayZ, and the Bohemia development tools do not need to be running.
+[*]Keep backups when replacing game or mod assets.
+[/list]
 
 PAA Viewer is an independent project and is not affiliated with or endorsed by Bohemia Interactive.

@@ -10,7 +10,7 @@ use crate::resize::{PotMode, ResizeFilter};
 #[command(
     name = "paa-viewer",
     author = "omp",
-    version = "0.1.2",
+    version = "0.1.3",
     about = "Bohemia Interactive PAA texture viewer, converter and power-of-two resizer"
 )]
 pub struct Cli {

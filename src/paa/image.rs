@@ -204,11 +204,13 @@ impl PaaImage {
         paa.maps.push(base_mip);
 
         if generate_mipmaps {
-            // Bohemia stops mipmaps at 4x4 for DXT or 1x1 for uncompressed
-            let min_dim = if format.is_dxt() { 4 } else { 1 };
-            while (current_w > min_dim || current_h > min_dim) && paa.maps.len() < 16 {
-                current_w = (current_w / 2).max(min_dim);
-                current_h = (current_h / 2).max(min_dim);
+            // DXT blocks are at least 4x4, but a narrow source dimension must
+            // never grow while generating the mipmap chain.
+            let min_w = if format.is_dxt() { width.min(4) } else { 1 };
+            let min_h = if format.is_dxt() { height.min(4) } else { 1 };
+            while (current_w > min_w || current_h > min_h) && paa.maps.len() < 16 {
+                current_w = (current_w / 2).max(min_w);
+                current_h = (current_h / 2).max(min_h);
                 current_img = image::imageops::resize(
                     &current_img,
                     current_w,

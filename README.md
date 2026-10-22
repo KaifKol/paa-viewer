@@ -58,6 +58,8 @@ Drop a file into the window or use **Open File**. The right panel shows PAA
 metadata and mipmap levels. Scroll over the image to zoom and drag to pan.
 Choose the output format and mipmap settings under **PAA Export Settings**,
 then use **Export As**.
+Resize actions always operate on the base image, even when a lower mipmap level
+is selected for preview.
 
 ### Settings and window behavior
 

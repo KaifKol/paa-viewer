@@ -1,7 +1,7 @@
 use std::io::Cursor;
 use image::{DynamicImage, GenericImageView, Rgba, RgbaImage};
 use paa_viewer::convert::{convert_image, ConvertOptions, ResizeOperation, TargetFormat};
-use paa_viewer::paa::{PaaImage, PaXType};
+use paa_viewer::paa::{PaaImage, PaXType, Taggs};
 use paa_viewer::resize::{nearest_power_of_two, next_power_of_two, resize_pot, scale_by_factor, scale_step, PotMode, ResizeFilter};
 
 fn create_test_image(width: u32, height: u32, with_alpha: bool) -> DynamicImage {
@@ -292,6 +292,42 @@ fn test_rectangular_mipmap_generation() {
     let last = paa.maps.last().unwrap();
     assert_eq!(last.width(PaXType::DXT1), 4);
     assert_eq!(last.height(), 4);
+}
+
+#[test]
+fn dxt_mipmap_dimensions_never_grow() {
+    let img = create_test_image(2, 64, false);
+    let paa = PaaImage::from_dynamic_image(&img, PaXType::DXT1, true)
+        .expect("creation failed");
+
+    for levels in paa.maps.windows(2) {
+        let previous = &levels[0];
+        let next = &levels[1];
+        assert!(
+            next.width(PaXType::DXT1) <= previous.width(PaXType::DXT1),
+            "mipmap width grew from {} to {}",
+            previous.width(PaXType::DXT1),
+            next.width(PaXType::DXT1)
+        );
+        assert!(
+            next.height() <= previous.height(),
+            "mipmap height grew from {} to {}",
+            previous.height(),
+            next.height()
+        );
+    }
+}
+
+#[test]
+fn swizzle_tag_is_identified() {
+    let mut taggs = Taggs::new();
+    taggs
+        .entries
+        .insert("ZIWS".to_string(), vec![3, 2, 4, 5]);
+
+    let tags = taggs.get_tag_infos();
+
+    assert_eq!(tags[0].display_name, "Swizzle (SWIZ)");
 }
 
 #[test]

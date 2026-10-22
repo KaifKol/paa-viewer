@@ -309,14 +309,20 @@ pub fn start_listener() {
     }
 }
 
-/// Check for the latest request sent from a secondary instance.
+/// Check for the latest file request, or an activation request when no file is pending.
 pub fn check_incoming_message() -> Option<IpcMessage> {
     if let Ok(rx) = IPC_CHANNEL.1.lock() {
-        let mut latest = None;
+        let mut pending = None;
         while let Ok(message) = rx.try_recv() {
-            latest = Some(message);
+            match message {
+                IpcMessage::Open(path) => pending = Some(IpcMessage::Open(path)),
+                IpcMessage::Activate if pending.is_none() => {
+                    pending = Some(IpcMessage::Activate);
+                }
+                IpcMessage::Activate => {}
+            }
         }
-        return latest;
+        return pending;
     }
     None
 }
@@ -397,6 +403,24 @@ mod tests {
 
         loopback_cleanup(&port_file);
         let _ = std::fs::remove_dir_all(&temp_dir);
+    }
+
+    #[test]
+    fn pending_open_is_not_discarded_by_later_activation() {
+        let _lock = TEST_MUTEX.lock().unwrap();
+        while check_incoming_message().is_some() {}
+
+        let path = PathBuf::from("/test/pending-texture.paa");
+        IPC_CHANNEL
+            .0
+            .send(IpcMessage::Open(path.clone()))
+            .expect("open message should be queued");
+        IPC_CHANNEL
+            .0
+            .send(IpcMessage::Activate)
+            .expect("activation message should be queued");
+
+        assert_eq!(check_incoming_message(), Some(IpcMessage::Open(path)));
     }
 
     #[test]

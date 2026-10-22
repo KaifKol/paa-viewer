@@ -172,9 +172,9 @@ impl Taggs {
                         format!("Offset table for {} mipmap levels", data.len() / 4),
                         None,
                     ),
-                    "SWAV" => (
-                        "Surface Waves (SWAV)".to_string(),
-                        "Water / wave animation parameters".to_string(),
+                    "ZIWS" | "SWIZ" => (
+                        "Swizzle (SWIZ)".to_string(),
+                        "Texture channel swizzle parameters".to_string(),
                         None,
                     ),
                     _ => (

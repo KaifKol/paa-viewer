@@ -59,6 +59,17 @@ fn read_installed(home: &TestHome, relative_path: impl AsRef<Path>) -> String {
         .expect("installed integration file should be readable")
 }
 
+#[test]
+fn packaged_desktop_entry_opens_one_file_per_process() {
+    let desktop_entry = include_str!("../packaging/paa-viewer.desktop");
+    let exec = desktop_entry
+        .lines()
+        .find_map(|line| line.strip_prefix("Exec="))
+        .expect("desktop entry must define Exec");
+
+    assert_eq!(exec, "paa-viewer %f");
+}
+
 #[cfg(target_os = "linux")]
 #[test]
 fn dolphin_service_menu_defines_every_advertised_action() {

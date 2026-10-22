@@ -111,6 +111,7 @@ impl PaaViewerApp {
                                     self.texture = None;
                                     self.paa_image = None;
                                     self.metadata = None;
+                                    self.cursor_info = None;
                                     self.status_message = Some((format!("Failed to decode PAA mipmap 0: {e}"), true));
                                 }
                             }
@@ -121,6 +122,7 @@ impl PaaViewerApp {
                             self.texture = None;
                             self.paa_image = None;
                             self.metadata = None;
+                            self.cursor_info = None;
                             self.status_message = Some((format!("Failed to read PAA: {e}"), true));
                         }
                     }
@@ -131,6 +133,7 @@ impl PaaViewerApp {
                     self.texture = None;
                     self.paa_image = None;
                     self.metadata = None;
+                    self.cursor_info = None;
                     self.status_message = Some((format!("Failed to open file: {e}"), true));
                 }
             }
@@ -155,6 +158,7 @@ impl PaaViewerApp {
                     self.texture = None;
                     self.paa_image = None;
                     self.metadata = None;
+                    self.cursor_info = None;
                     self.status_message = Some((format!("Failed to load image: {e}"), true));
                 }
             }
@@ -470,6 +474,11 @@ impl eframe::App for PaaViewerApp {
             self.show_settings_modal = !self.show_settings_modal;
         }
 
+        // Load the startup argument before newer requests forwarded by secondary instances.
+        if let Some(path) = self.initial_file_to_load.take() {
+            self.load_file(path, ctx);
+        }
+
         // Check for requests forwarded from another instance.
         if let Some(message) = crate::single_instance::check_incoming_message() {
             if let crate::single_instance::IpcMessage::Open(path) = message {
@@ -477,11 +486,6 @@ impl eframe::App for PaaViewerApp {
             }
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
             ctx.request_repaint();
-        }
-
-        // Load initial file on first frame
-        if let Some(path) = self.initial_file_to_load.take() {
-            self.load_file(path, ctx);
         }
         // Handle Drag & Drop of files
         let dropped_files = ctx.input(|i| i.raw.dropped_files.clone());
@@ -533,14 +537,22 @@ impl eframe::App for PaaViewerApp {
                 // Quick resize actions
                 ui.label("Scale:");
                 if ui.button("÷2 (x0.5)").on_hover_text("Half resolution").clicked() {
-                    if let Some(img) = self.current_image.clone() {
+                    if let Some(img) = base_image_for_edit(
+                        self.paa_image.as_ref(),
+                        self.current_mip_level,
+                        self.current_image.as_ref(),
+                    ) {
                         let resized = scale_step(&img, -1, self.resize_filter);
                         self.apply_resize(resized, ctx);
                     }
                 }
 
                 if ui.button("x2 (Double)").on_hover_text("Double resolution").clicked() {
-                    if let Some(img) = self.current_image.clone() {
+                    if let Some(img) = base_image_for_edit(
+                        self.paa_image.as_ref(),
+                        self.current_mip_level,
+                        self.current_image.as_ref(),
+                    ) {
                         let resized = scale_step(&img, 1, self.resize_filter);
                         self.apply_resize(resized, ctx);
                     }
@@ -879,6 +891,7 @@ impl eframe::App for PaaViewerApp {
                     self.cursor_info = None;
                 }
             } else {
+                self.cursor_info = None;
                 // Empty state text
                 painter.text(
                     viewport_rect.center(),
@@ -897,7 +910,11 @@ impl eframe::App for PaaViewerApp {
             let mut close_modal = false;
             let mut factor_input = self.resize_factor_input.clone();
             let mut filter = self.resize_filter;
-            let current_img = self.current_image.clone();
+            let current_img = base_image_for_edit(
+                self.paa_image.as_ref(),
+                self.current_mip_level,
+                self.current_image.as_ref(),
+            );
 
             egui::Window::new("Resize Image")
                 .collapsible(false)
@@ -980,6 +997,39 @@ fn draw_checkerboard(painter: &egui::Painter, rect: Rect, viewport: Rect) {
     }
 }
 
+fn base_image_for_edit(
+    paa_image: Option<&PaaImage>,
+    current_mip_level: usize,
+    current_image: Option<&DynamicImage>,
+) -> Option<DynamicImage> {
+    let base_image = if current_mip_level != 0 {
+        paa_image.and_then(|paa| paa.to_dynamic_image(0).ok())
+    } else {
+        None
+    };
+    base_image.or_else(|| current_image.cloned())
+}
+
+fn decode_file_uri(path: &str, windows: bool) -> String {
+    let Some(stripped) = path.strip_prefix("file://") else {
+        return path.to_string();
+    };
+    let path_part = stripped.strip_prefix("localhost").unwrap_or(stripped);
+    let decoded = percent_decode(path_part);
+    let bytes = decoded.as_bytes();
+
+    if windows
+        && bytes.len() >= 3
+        && bytes[0] == b'/'
+        && bytes[1].is_ascii_alphabetic()
+        && bytes[2] == b':'
+    {
+        decoded[1..].to_string()
+    } else {
+        decoded
+    }
+}
+
 pub fn clean_path(path: PathBuf) -> PathBuf {
     let raw = path.to_string_lossy();
     let mut s = raw.trim();
@@ -992,16 +1042,7 @@ pub fn clean_path(path: PathBuf) -> PathBuf {
     }
     s = s.trim();
 
-    let unescaped = if let Some(stripped) = s.strip_prefix("file://") {
-        let path_part = if let Some(after_host) = stripped.strip_prefix("localhost") {
-            after_host
-        } else {
-            stripped
-        };
-        percent_decode(path_part)
-    } else {
-        s.to_string()
-    };
+    let unescaped = decode_file_uri(s, cfg!(windows));
 
     let p = PathBuf::from(unescaped);
     if let Ok(canon) = p.canonicalize() {
@@ -1027,4 +1068,36 @@ fn percent_decode(s: &str) -> String {
         i += 1;
     }
     String::from_utf8_lossy(&out).to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn editing_a_selected_mipmap_uses_the_base_image() {
+        let image = DynamicImage::new_rgba8(64, 32);
+        let paa = PaaImage::from_dynamic_image(&image, PaXType::DXT1, true)
+            .expect("PAA creation should succeed");
+        let selected_mip = paa
+            .to_dynamic_image(2)
+            .expect("selected mipmap should decode");
+
+        let editable = base_image_for_edit(Some(&paa), 2, Some(&selected_mip))
+            .expect("base image should decode");
+
+        assert_eq!(editable.dimensions(), (64, 32));
+    }
+
+    #[test]
+    fn windows_file_uri_becomes_a_drive_path() {
+        assert_eq!(
+            decode_file_uri("file:///C:/My%20Textures/test.paa", true),
+            "C:/My Textures/test.paa"
+        );
+        assert_eq!(
+            decode_file_uri("file://localhost/C:/test.paa", true),
+            "C:/test.paa"
+        );
+    }
 }

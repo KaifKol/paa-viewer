@@ -80,17 +80,16 @@ impl ContextMenuManager {
             return;
         }
 
-        let target_exe = match Self::resolve_executable_path() {
-            Ok(e) => e,
-            Err(_) => return,
-        };
-        let target_exe_str = target_exe.to_string_lossy();
-
         let needs_install = if !Self::is_installed() {
             true
         } else {
             #[cfg(not(target_os = "windows"))]
             {
+                let target_exe = match Self::resolve_executable_path() {
+                    Ok(e) => e,
+                    Err(_) => return,
+                };
+                let target_exe_str = target_exe.to_string_lossy();
                 let desktop_file = Self::linux_user_data_dir().join("applications").join("paa-viewer.desktop");
                 if let Ok(content) = std::fs::read_to_string(&desktop_file) {
                     // Re-register if desktop file has stale /tmp/.mount_ or points to different exe
@@ -144,6 +143,7 @@ impl ContextMenuManager {
     pub fn notify(title: &str, body: &str, is_error: bool) {
         #[cfg(target_os = "windows")]
         {
+            let _ = is_error;
             let script = format!(
                 "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null; \
                 $t = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02); \

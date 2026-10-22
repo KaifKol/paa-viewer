@@ -1,3 +1,4 @@
+#[cfg(unix)]
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -33,6 +34,7 @@ pub fn set_repaint_context(context: eframe::egui::Context) {
     }
 }
 
+#[cfg(unix)]
 fn wake_gui() {
     let context = REPAINT_CONTEXT
         .lock()
@@ -62,6 +64,10 @@ pub fn try_forward_to_existing(file: Option<&Path>) -> bool {
                 return true;
             }
         }
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = file;
     }
 
     false

@@ -553,25 +553,35 @@ Quote=double
     pub fn is_installed_windows() -> bool {
         #[cfg(target_os = "windows")]
         {
-            let output = Command::new("reg")
-                .args(["query", r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}\InprocServer32"])
-                .output();
-            if let Ok(out) = output {
-                if !out.status.success() {
-                    return false;
-                }
-            } else {
-                return false;
-            }
+            let required_keys = [
+                (
+                    r"HKCU\Software\Classes\CLSID\{69A507B4-551F-4005-92E2-48512EB2F517}\InprocServer32",
+                    None,
+                ),
+                (r"HKCU\Software\Classes\.paa", None),
+                (
+                    r"HKCU\Software\Classes\PaaViewer.Texture",
+                    Some("TypeOverlay"),
+                ),
+                (
+                    r"HKCU\Software\Classes\PaaViewer.Texture",
+                    Some("ThumbnailCutoff"),
+                ),
+            ];
 
-            let output = Command::new("reg")
-                .args(["query", r"HKCU\Software\Classes\.paa"])
-                .output();
-            if let Ok(out) = output {
-                return out.status.success();
-            }
+            required_keys.iter().all(|&(key, value)| {
+                let mut command = Command::new("reg");
+                command.args(["query", key]);
+                if let Some(value) = value {
+                    command.args(["/v", value]);
+                }
+                command.output().is_ok_and(|output| output.status.success())
+            })
         }
-        false
+        #[cfg(not(target_os = "windows"))]
+        {
+            false
+        }
     }
 
     pub fn windows_thumbnail_dll_path(exe_path: &Path) -> PathBuf {
@@ -609,6 +619,8 @@ Quote=double
 [HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture]
 @="Bohemia Interactive PAA Texture"
 "FriendlyTypeName"="Bohemia Interactive PAA Texture"
+"TypeOverlay"=""
+"ThumbnailCutoff"=dword:00000001
 
 [HKEY_CURRENT_USER\Software\Classes\PaaViewer.Texture\DefaultIcon]
 @="{exe_str},0"
@@ -814,5 +826,7 @@ mod tests {
         assert!(reg.contains(r"SystemFileAssociations\.paa\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"));
         assert!(reg.contains(r"SystemFileAssociations\.pac\ShellEx\{E357FCCD-A995-4576-B01F-234630154E96}"));
         assert!(reg.contains(r#""ThreadingModel"="Apartment""#));
+        assert!(reg.contains(r#""TypeOverlay"="""#));
+        assert!(reg.contains(r#""ThumbnailCutoff"=dword:00000001"#));
     }
 }

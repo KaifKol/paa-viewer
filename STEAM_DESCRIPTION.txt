@@ -108,8 +108,14 @@ Download the [b].deb[/b] file and install it with [b]sudo apt install ./paa-view
 [*]Use 256, 512, 1024, and 2048 pixel presets.
 [/list]
 
-[h2]Basic workflow[/h2]
+[b]Settings and integration[/b]
 
+[list]
+[*]Choose whether files launched from Explorer, Linux file managers, or the command line reuse the running viewer or open in a separate window.
+[*]Manage file associations, thumbnail previews, and context menus from the Settings window.
+[/list]
+
+[h2]Basic workflow[/h2]
 [list=1]
 [*]Start PAA Viewer.
 [*]Select [b]Open File[/b] or drag a texture into the window.
@@ -119,8 +125,7 @@ Download the [b].deb[/b] file and install it with [b]sudo apt install ./paa-view
 [*]Select [b]Export As[/b] and choose the output path.
 [/list]
 
-Opening a second file while PAA Viewer is running reuses the existing window.
-
+Files launched from Explorer, file managers, or the command line can either reuse the current viewer window or open in a separate native window, configurable under [b]Settings[/b]. In-app [b]Open File[/b] and drag-and-drop always replace the texture in the current window.
 [h2]Command line[/h2]
 
 The command line can inspect metadata, convert individual files, and process entire directories.
@@ -158,7 +163,7 @@ Thumbnail previews, file associations, and context menus are enabled by [b]Syste
 [*]Install conversion actions for Dolphin, Nautilus, and Nemo.
 [/list]
 
-Use [b]System Integration[/b] in the desktop application. Command-line alternatives are listed in the GitHub documentation above.
+Use [b]Settings[/b] -> [b]System Integration[/b] in the desktop application. Command-line alternatives are listed in the GitHub documentation above.
 [h2]Important behavior[/h2]
 
 [list]

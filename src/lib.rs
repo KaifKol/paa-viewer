@@ -5,6 +5,7 @@ pub mod gui;
 pub mod paa;
 pub mod resize;
 pub mod single_instance;
+pub mod settings;
 pub mod thumbnail;
 
 pub use context_menu::ContextMenuManager;

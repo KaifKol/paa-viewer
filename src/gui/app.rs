@@ -4,6 +4,7 @@ use image::{DynamicImage, GenericImageView};
 
 use crate::paa::{PaaImage, PaaMetadata, PaXType};
 use crate::resize::{is_power_of_two, next_power_of_two, resize_pot, scale_by_factor, scale_step, PotMode, ResizeFilter};
+use crate::settings::{AppSettings, FileOpenMode};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ChannelMode {
@@ -36,6 +37,10 @@ pub struct PaaViewerApp {
     pub resize_factor_input: String,
     pub resize_filter: ResizeFilter,
     pub status_message: Option<(String, bool)>, // (msg, is_error)
+    pub show_settings_modal: bool,
+    pub settings: AppSettings,
+    pub settings_error: Option<String>,
+
 
     // Export states
     pub export_pax_type: PaXType,
@@ -65,6 +70,9 @@ impl PaaViewerApp {
             resize_factor_input: "0.5".to_string(),
             resize_filter: ResizeFilter::Lanczos3,
             status_message: None,
+            show_settings_modal: false,
+            settings: AppSettings::load(),
+            settings_error: None,
             export_pax_type: PaXType::DXT5,
             export_generate_mipmaps: true,
         }
@@ -279,10 +287,189 @@ impl PaaViewerApp {
             self.status_message = Some(("Resized image successfully".into(), false));
         }
     }
+
+    fn show_settings_window(&mut self, ctx: &egui::Context) {
+        if !self.show_settings_modal {
+            return;
+        }
+
+        let mut open = self.show_settings_modal;
+        let mut close = false;
+        egui::Window::new("Settings")
+            .collapsible(false)
+            .resizable(false)
+            .default_width(450.0)
+            .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
+            .open(&mut open)
+            .show(ctx, |ui| {
+                ui.set_width(450.0);
+                ui.heading("Window & Launch Behavior");
+                ui.add_space(2.0);
+                ui.label(
+                    egui::RichText::new(
+                        "Choose how files launched from your file manager or command line are opened.",
+                    )
+                    .weak(),
+                );
+                ui.add_space(6.0);
+
+                ui.group(|ui| {
+                    let current_mode = self.settings.file_open_mode;
+                    let mut selected_mode = current_mode;
+                    ui.radio_value(
+                        &mut selected_mode,
+                        FileOpenMode::SameWindow,
+                        "Reuse current viewer window",
+                    );
+                    ui.indent("same_window_desc", |ui| {
+                        ui.label(
+                            egui::RichText::new(
+                                "Brings the active window to the front and replaces the current image.",
+                            )
+                            .small()
+                            .weak(),
+                        );
+                    });
+
+                    ui.add_space(6.0);
+                    ui.radio_value(
+                        &mut selected_mode,
+                        FileOpenMode::SeparateWindow,
+                        "Open a separate viewer window",
+                    );
+                    ui.indent("separate_window_desc", |ui| {
+                        ui.label(
+                            egui::RichText::new(
+                                "Opens an independent viewer window for each file.",
+                            )
+                            .small()
+                            .weak(),
+                        );
+                    });
+
+                    ui.add_space(6.0);
+                    ui.label(
+                        egui::RichText::new(
+                            "In-app 'Open File' and drag-and-drop always replace the image in the current window.",
+                        )
+                        .small()
+                        .italics(),
+                    );
+
+                    if selected_mode != current_mode {
+                        self.settings.file_open_mode = selected_mode;
+                        self.settings_error = self.settings.save().err();
+                    }
+                });
+
+                if let Some(error) = &self.settings_error {
+                    ui.add_space(6.0);
+                    ui.colored_label(
+                        Color32::from_rgb(255, 80, 80),
+                        format!("⚠ Save error: {error}"),
+                    );
+                }
+
+                ui.add_space(14.0);
+                ui.heading("System Integration");
+                ui.add_space(2.0);
+                ui.label(
+                    egui::RichText::new(
+                        "Register file associations and desktop context menu shortcuts.",
+                    )
+                    .weak(),
+                );
+                ui.add_space(6.0);
+
+                ui.group(|ui| {
+                    if crate::context_menu::ContextMenuManager::is_installed() {
+                        ui.colored_label(
+                            Color32::from_rgb(0, 200, 100),
+                            "✔ Registered in system",
+                        );
+                        ui.small("Double-click: opens PAA / PAC");
+                        ui.small("Right-click: converts PAA <-> PNG");
+                        ui.add_space(6.0);
+                        if ui.button("Remove from System").clicked() {
+                            self.status_message =
+                                Some(match crate::context_menu::ContextMenuManager::uninstall() {
+                                    Ok(message) => (message, false),
+                                    Err(error) => (error, true),
+                                });
+                        }
+                    } else {
+                        ui.colored_label(
+                            Color32::from_rgb(255, 180, 0),
+                            "Not registered in system",
+                        );
+                        ui.small("Click to enable double-click opening & context menus");
+                        ui.add_space(6.0);
+                        if ui.button("Register in System").clicked() {
+                            self.status_message =
+                                Some(match crate::context_menu::ContextMenuManager::install() {
+                                    Ok(message) => (message, false),
+                                    Err(error) => (error, true),
+                                });
+                        }
+                    }
+
+                    ui.add_space(6.0);
+                    ui.separator();
+                    ui.add_space(4.0);
+                    if ui
+                        .button("Export .reg for Windows")
+                        .on_hover_text(
+                            "Export Windows registry file to register context menu on Windows",
+                        )
+                        .clicked()
+                    {
+                        if let Some(path) = rfd::FileDialog::new()
+                            .add_filter("Registry Script (*.reg)", &["reg"])
+                            .set_file_name("paa-viewer-context-menu.reg")
+                            .save_file()
+                        {
+                            let exe = std::env::current_exe().unwrap_or_else(|_| {
+                                std::path::PathBuf::from("paa-viewer.exe")
+                            });
+                            let reg =
+                                crate::context_menu::ContextMenuManager::generate_windows_reg(&exe);
+                            self.status_message = Some(match std::fs::write(&path, reg) {
+                                Ok(()) => (
+                                    format!("Exported .reg file to {}", path.display()),
+                                    false,
+                                ),
+                                Err(error) => (
+                                    format!("Failed to write .reg file: {error}"),
+                                    true,
+                                ),
+                            });
+                        }
+                    }
+                });
+
+                ui.add_space(12.0);
+                ui.separator();
+                ui.add_space(6.0);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+                if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
+                    close = true;
+                }
+            });
+
+        self.show_settings_modal = open && !close;
+    }
 }
 
 impl eframe::App for PaaViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        if ctx.input(|i| i.modifiers.command && i.key_pressed(egui::Key::Comma)) {
+            self.show_settings_modal = !self.show_settings_modal;
+        }
+
         // Check for requests forwarded from another instance.
         if let Some(message) = crate::single_instance::check_incoming_message() {
             if let crate::single_instance::IpcMessage::Open(path) = message {
@@ -395,6 +582,12 @@ impl eframe::App for PaaViewerApp {
 
                 if ui.checkbox(&mut self.linear_filter, "Bilinear").on_hover_text("Toggle linear texture filtering").changed() {
                     self.update_texture(ctx);
+                }
+
+                ui.separator();
+
+                if ui.button("⚙ Settings").on_hover_text("Preferences and system integration (Ctrl+,)").clicked() {
+                    self.show_settings_modal = true;
                 }
             });
         });
@@ -607,50 +800,6 @@ impl eframe::App for PaaViewerApp {
                         ui.checkbox(&mut self.export_generate_mipmaps, "Generate Mipmaps");
                     });
 
-                    // System Integration & Context Menu
-                    ui.add_space(12.0);
-                    ui.heading("System Integration");
-                    ui.separator();
-                    ui.group(|ui| {
-                        let is_reg = crate::context_menu::ContextMenuManager::is_installed();
-                        if is_reg {
-                            ui.colored_label(Color32::from_rgb(0, 200, 100), "✔ Registered in system");
-                            ui.small("Double-click: opens PAA / PAC");
-                            ui.small("Right-click: converts PAA <-> PNG");
-                            ui.add_space(4.0);
-                            if ui.button("Remove from System").clicked() {
-                                match crate::context_menu::ContextMenuManager::uninstall() {
-                                    Ok(msg) => self.status_message = Some((msg, false)),
-                                    Err(err) => self.status_message = Some((err, true)),
-                                }
-                            }
-                        } else {
-                            ui.colored_label(Color32::from_rgb(255, 180, 0), "Not registered in system");
-                            ui.small("Click to enable double-click opening & context menus");
-                            ui.add_space(4.0);
-                            if ui.button("Register in System").clicked() {
-                                match crate::context_menu::ContextMenuManager::install() {
-                                    Ok(msg) => self.status_message = Some((msg, false)),
-                                    Err(err) => self.status_message = Some((err, true)),
-                                }
-                            }
-                        }
-                        if ui.button("Export .reg for Windows").on_hover_text("Export Windows registry file to register context menu on Windows").clicked() {
-                            if let Some(path) = rfd::FileDialog::new()
-                                .add_filter("Registry Script (*.reg)", &["reg"])
-                                .set_file_name("paa-viewer-context-menu.reg")
-                                .save_file()
-                            {
-                                let exe = std::env::current_exe().unwrap_or_else(|_| std::path::PathBuf::from("paa-viewer.exe"));
-                                let reg = crate::context_menu::ContextMenuManager::generate_windows_reg(&exe);
-                                if let Err(e) = std::fs::write(&path, reg) {
-                                    self.status_message = Some((format!("Failed to write .reg file: {e}"), true));
-                                } else {
-                                    self.status_message = Some((format!("Exported .reg file to {}", path.display()), false));
-                                }
-                            }
-                        }
-                    });
                 });
             });
 
@@ -790,6 +939,8 @@ impl eframe::App for PaaViewerApp {
                 self.apply_resize(resized, ctx);
             }
         }
+
+        self.show_settings_window(ctx);
     }
 }
 

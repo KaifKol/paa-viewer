@@ -36,6 +36,7 @@ chmod +x PAA_Viewer-x86_64.AppImage
 - Generate PAA mipmaps automatically
 - Resize by a scale factor or align each dimension to a power of two
 - Convert one file or a directory from the command line
+- Configure whether externally launched files reuse the current viewer or open in a separate window
 - Add file associations, thumbnail previews, and conversion actions to Windows Explorer or Linux
   file managers
 
@@ -57,6 +58,13 @@ Drop a file into the window or use **Open File**. The right panel shows PAA
 metadata and mipmap levels. Scroll over the image to zoom and drag to pan.
 Choose the output format and mipmap settings under **PAA Export Settings**,
 then use **Export As**.
+
+### Settings and window behavior
+
+Open **Settings** from the top toolbar to configure application preferences:
+
+- **External file open mode:** Choose whether files launched from Windows Explorer, Linux file managers, or the command line reuse the running viewer window or open in a separate native window. (In-app **Open File** and drag-and-drop always display the file in the current window.)
+- **System Integration:** Register or remove file associations, thumbnail preview handlers, and desktop context menu actions.
 
 ## Command line
 
@@ -139,7 +147,7 @@ The app can register itself as the handler for `.paa` and `.pac` files, providin
 
 Thumbnail previews and file associations are enabled by **System Integration**. Note that file-manager thumbnail caches may need to be refreshed or the file manager reopened to display newly generated previews.
 
-Use the **System Integration** section in the app, or run:
+Open **Settings** from the top toolbar in the desktop app, or run:
 
 ```bash
 paa-viewer install

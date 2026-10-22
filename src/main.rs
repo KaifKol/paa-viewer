@@ -8,31 +8,15 @@ use paa_viewer::context_menu::ContextMenuManager;
 use paa_viewer::convert::{batch_convert, convert_image};
 use paa_viewer::gui::run_gui;
 use paa_viewer::paa::PaaImage;
+use paa_viewer::settings::{AppSettings, FileOpenMode};
+use paa_viewer::single_instance;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     match args.command {
-        None => {
-            let clean_file = args.file.map(paa_viewer::gui::app::clean_path);
-            if paa_viewer::single_instance::try_forward_to_existing(clean_file.as_deref()) {
-                return Ok(());
-            }
-            paa_viewer::single_instance::start_listener();
-            let res = run_gui(clean_file);
-            paa_viewer::single_instance::cleanup();
-            res?;
-        }
-        Some(Commands::Gui { file }) => {
-            let clean_file = file.map(paa_viewer::gui::app::clean_path);
-            if paa_viewer::single_instance::try_forward_to_existing(clean_file.as_deref()) {
-                return Ok(());
-            }
-            paa_viewer::single_instance::start_listener();
-            let res = run_gui(clean_file);
-            paa_viewer::single_instance::cleanup();
-            res?;
-        }
+        None => launch_gui(args.file)?,
+        Some(Commands::Gui { file }) => launch_gui(file)?,
         Some(Commands::Info { file, json }) => {
             let f = File::open(&file)
                 .map_err(|e| format!("Failed to open file '{}': {e}", file.display()))?;
@@ -198,6 +182,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    Ok(())
+}
+
+fn launch_gui(file: Option<PathBuf>) -> Result<(), Box<dyn std::error::Error>> {
+    let clean_file = file.map(paa_viewer::gui::app::clean_path);
+    let settings = AppSettings::load();
+
+    if settings.file_open_mode == FileOpenMode::SameWindow {
+        if single_instance::try_forward_to_existing(clean_file.as_deref()) {
+            return Ok(());
+        }
+        single_instance::start_listener();
+    }
+
+    let result = run_gui(clean_file);
+    if settings.file_open_mode == FileOpenMode::SameWindow {
+        single_instance::cleanup();
+    }
+    result?;
     Ok(())
 }
 

@@ -99,7 +99,7 @@ jobs:
         id: version
         shell: bash
         run: |
-          version="$(grep '^version = ' Cargo.toml | cut -d '\"' -f 2)"
+          version="$(awk -F'"' '/^version = / { print $2; exit }' Cargo.toml)"
           echo "tag=v${version}" >> "$GITHUB_OUTPUT"
 
       - name: Download built artifacts

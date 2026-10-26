@@ -1,11 +1,11 @@
-name: Build Artifacts
+name: Build & Release
 
 on:
   push:
     branches: [ main ]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-linux:
@@ -86,3 +86,37 @@ jobs:
         with:
           name: paa-viewer-windows-x64
           path: dist/*.zip
+
+  publish-release:
+    name: Update Version Release
+    needs: [build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Read package version
+        id: version
+        shell: bash
+        run: |
+          version="$(grep '^version = ' Cargo.toml | cut -d '\"' -f 2)"
+          echo "tag=v${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Download built artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: release-assets
+
+      - name: Create or update GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            release-assets/paa-viewer-linux-packages/*
+            release-assets/paa-viewer-windows-x64/*
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+          make_latest: true
